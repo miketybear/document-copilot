@@ -10,8 +10,8 @@ This file is the source of truth for any coding agent (Claude Code, Cursor, Code
 - **Migrations:** SQLAlchemy models + Alembic from the backend
 - **Retrieval:** Supabase `pgvector` + Postgres full-text search
 - **Auth:** Supabase Auth
-- **Hosting:** Railway (backend service + frontend service)
-- **LLM + embeddings:** OpenAI
+- **Hosting:** On-premise (Docker Compose: frontend + backend containers behind a reverse proxy)
+- **LLM + embeddings:** Azure OpenAI
 
 Stack is locked unless explicitly changed. Don't propose alternatives without a stated reason.
 
@@ -19,7 +19,7 @@ Stack is locked unless explicitly changed. Don't propose alternatives without a 
 
 ```text
 document-copilot/
-├── AGENTS.md           # this file
+├── CLAUDE.md           # this file
 ├── README.md
 ├── data/               # local corpus + download script (payloads gitignored)
 ├── docs/               # specs, briefs, design notes
@@ -34,7 +34,7 @@ document-copilot/
 OK to depend on:
 
 - Things that are genuinely hard to get right (HTTP clients, ASGI servers, SQL drivers, parsers, LLM SDKs, ORM, migrations, auth SDKs).
-- The declared stack (FastAPI, React, Vite, Supabase clients, OpenAI SDK, etc.).
+- The declared stack (FastAPI, React, Vite, Supabase clients, Azure OpenAI SDK, etc.).
 
 Not OK:
 
