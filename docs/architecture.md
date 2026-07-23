@@ -2,17 +2,17 @@
 
 ## Purpose
 
-Document Copilot is an internal research assistant for analysts who need grounded answers from a curated SEC filing corpus. The architecture must optimize for trust: every answer is generated from retrieved source passages, every factual claim is citable, and the system fails clearly when the corpus does not support an answer.
+Document Copilot is an internal knowledge assistant for employees who need grounded answers from the company's policies, guidelines, and technical work instructions. The architecture must optimize for trust: every answer is generated from retrieved source passages, every factual claim is citable, and the system fails clearly when the corpus does not support an answer.
 
 This document describes the target architecture for the chat experience, LLM orchestration, and the communication layer between the React SPA, Supabase, and FastAPI backend.
 
 ## High-Level Architecture
 
-The best opening diagram is a service-level view that shows the two core paths: the live chat path that serves users, and the ingestion path that prepares SEC filings for retrieval.
+The best opening diagram is a service-level view that shows the two core paths: the live chat path that serves users, and the ingestion path that prepares internal documents for retrieval.
 
 ```mermaid
 flowchart LR
-    user[Analyst] --> browser[Browser<br/>React chat app]
+    user[Employee] --> browser[Browser<br/>React chat app]
 
     subgraph railway[Railway]
         frontend[Frontend service<br/>Vite build]
@@ -25,8 +25,8 @@ flowchart LR
     end
 
     openai[OpenAI<br/>LLM + embeddings]
-    corpus[SEC filing corpus]
-    ingestion[Ingestion pipeline<br/>download, parse, chunk, embed]
+    corpus[Internal document corpus]
+    ingestion[Ingestion pipeline<br/>collect, parse, chunk, embed]
 
     frontend -->|serves app| browser
     browser -->|sign in| auth
@@ -191,8 +191,8 @@ The agent's instructions should encode the product contract:
 - Answer only from retrieved passages.
 - Cite every factual claim.
 - If the retrieved context is insufficient, say that the corpus does not contain enough evidence.
-- Do not provide stock recommendations or investment advice.
-- Keep answers concise enough for analyst review, but include enough cited passages to verify the answer.
+- Do not provide binding interpretation beyond what the cited text says; for ambiguous or high-stakes questions, tell the user to confirm with the document owner or the relevant department (HR, Legal, etc.).
+- Keep answers concise enough for quick review, but include enough cited passages to verify the answer.
 
 Retrieval and grounding remain independent from PydanticAI. This keeps ingestion, retrieval tests, and citation validation testable without invoking the LLM.
 
@@ -206,7 +206,7 @@ Document Copilot uses hybrid retrieval:
 4. Fuse the two ranked lists in Python with Reciprocal Rank Fusion.
 5. Fetch the selected chunks, source document metadata, and optional neighboring chunks for grounding.
 
-This keeps the database responsible for efficient ranked retrieval and keeps the application responsible for product-specific ranking policy. The first implementation should avoid agent-generated SQL; the PydanticAI agent receives bounded tools such as `search_filings`, `read_chunk`, and `read_surrounding_chunks`.
+This keeps the database responsible for efficient ranked retrieval and keeps the application responsible for product-specific ranking policy. The first implementation should avoid agent-generated SQL; the PydanticAI agent receives bounded tools such as `search_documents`, `read_chunk`, and `read_surrounding_chunks`.
 
 ## Supabase and FastAPI Communication
 
@@ -272,26 +272,28 @@ Streaming responsibilities:
 
 Supabase tables should be small and product-oriented:
 
-- `profiles`: one row per authenticated user, keyed by Supabase `auth.users.id`.
+- `users`: one row per authenticated user, keyed by Supabase `auth.users.id`.
 - `chat_threads`: thread metadata, owner, title, timestamps.
 - `chat_messages`: user and assistant messages in order, with AI SDK-compatible message JSON where useful.
 - `message_citations`: normalized citation records linked to assistant messages.
-- `source_documents`: original document records with filing metadata, source URL, and normalized Markdown content.
+- `source_documents`: original document records with policy/guideline metadata, source location, and normalized Markdown content.
 - `document_chunks`: chunk text, chunk metadata, embeddings, and generated full-text search vectors.
 
-`source_documents` stores the normalized Markdown version of each filing so the application can re-chunk, inspect, and cite the original extracted text without reaching back into downloaded HTML files. `document_chunks` stores retrieval-ready passages:
+`source_documents` stores the normalized Markdown version of each document (converted from its PDF/DOCX/PPT source file) so the application can re-chunk, inspect, and cite the original extracted text without reaching back into the source file. Each row also tracks `document_type` (policy, guideline, work instruction), `department`, `owner`, `version`, `effective_date`, and `status` (`current` or `superseded`). When a document is revised, the new version is inserted as a new row and the prior row is marked `superseded` with a `superseded_by` reference, so retrieval never grounds an answer in an outdated version.
+
+`document_chunks` stores retrieval-ready passages:
 
 - chunk ID
 - document ID
 - chunk index
-- page or section metadata
+- heading path (section and subsection titles) so a chunk keeps its place in the document's structure
 - chunk text
 - embedding vector
 - generated `tsvector` for full-text search
 - token count
-- metadata JSON for ticker, company, filing type, filing date, year, accession number, page, section, and source offsets
+- metadata JSON for department, document type, version, and source offsets
 
-Hybrid retrieval runs two bounded queries against `document_chunks`: a semantic `pgvector` query and a Postgres full-text query. The backend fuses those ranked lists with Reciprocal Rank Fusion, then fetches the selected chunks and neighboring context for grounding.
+Hybrid retrieval runs two bounded queries against `document_chunks`, scoped to `status = current`: a semantic `pgvector` query and a Postgres full-text query. The backend fuses those ranked lists with Reciprocal Rank Fusion, then fetches the selected chunks and neighboring context for grounding.
 
 ## Schema Management
 
@@ -374,7 +376,7 @@ Railway should run two services:
 - Frontend: static Vite build served as a web app.
 - Backend: FastAPI service running Uvicorn.
 
-Supabase remains hosted and stores the durable retrieval data. The Railway backend can stay stateless because document chunks, embeddings, full-text search vectors, chats, and citations all live in Supabase Postgres. Raw downloaded filings remain gitignored local ingestion inputs unless a later workflow stores them in object storage.
+Supabase remains hosted and stores the durable retrieval data. The Railway backend can stay stateless because document chunks, embeddings, full-text search vectors, chats, and citations all live in Supabase Postgres. Raw source files (PDF/DOCX/PPT) remain gitignored local ingestion inputs unless a later workflow stores them in object storage.
 
 ## Implementation Sequence
 
@@ -385,7 +387,7 @@ Supabase remains hosted and stores the durable retrieval data. The Railway backe
 5. Add the shared frontend API client with automatic bearer-token injection.
 6. Add the chat streaming endpoint with a stubbed assistant response.
 7. Add AI SDK chat UI on the frontend pointed at FastAPI.
-8. Add Markdown ingestion, chunking, embeddings, and Supabase writes.
+8. Add document ingestion (PDF/DOCX/PPT to Markdown), chunking, embeddings, and Supabase writes.
 9. Add semantic search with `pgvector`.
 10. Add Postgres full-text search and Python RRF fusion.
 11. Add PydanticAI document agent with typed dependencies and typed answer output.
@@ -397,6 +399,12 @@ Supabase remains hosted and stores the durable retrieval data. The Railway backe
 - No Next.js, SSR, server components, or frontend route handlers.
 - No direct OpenAI calls from the browser.
 - No separate managed vector database outside Supabase.
-- No multi-tenant architecture.
+- No per-document or per-department access control in v1: every authenticated employee can retrieve every current document. This keeps the first version simple; see Future Considerations for how to add it later without a rearchitecture.
 - No external market/news data.
-- No trading recommendations or generated stock picks.
+- No binding policy interpretation or legal/HR advice beyond citing the source text.
+
+## Future Considerations
+
+- **Per-document access control.** If some documents end up restricted (e.g. HR-only, department-only), add a `visibility` or `allowed_roles` column to `source_documents` and filter the retrieval query by the requesting user's role/department. This is additive: it constrains which documents are searched, and does not change the retrieval, grounding, or streaming architecture.
+- **Document sensitivity classification.** If restricted documents are introduced, pair access control with a sensitivity label so the frontend can flag restricted sources in the UI.
+- **Chunking tuning.** Start with heading-aware chunking (already reflected in the data model); revisit chunk boundaries once real work-instruction documents show how deeply nested their procedures are.
