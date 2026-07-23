@@ -1,12 +1,10 @@
 # Document Copilot
 
-An internal AI chatbot that lets analysts query a corpus of documents in plain English and get sourced, citable answers.
+An internal AI chatbot that lets employees query a corpus of company policies, guidelines, and technical work instructions in plain English and get sourced, citable answers.
 
-## The client
+## Why
 
-**Driftwood Capital** — fictional independent investment research firm. Their analysts spend half their week reading 10-Ks and 10-Qs before they can produce any original analysis. Document Copilot eats that intake work so they can skip straight to insight.
-
-Full brief: [docs/client-brief.md](docs/client-brief.md)
+Employees waste real time hunting through scattered policy and procedure documents to answer routine questions. Document Copilot eats that search work: ask a question in plain English, get an answer grounded in and cited to the source document, so you can trust it enough to act on it.
 
 ## Stack
 
@@ -29,7 +27,7 @@ document-copilot/
 ├── README.md           # this file
 ├── data/               # local corpus + download script (payloads gitignored)
 ├── docs/
-│   └── client-brief.md # the client one-pager
+│   └── architecture.md # target architecture
 ├── backend/            # FastAPI service
 └── frontend/           # React SPA (Vite)
 ```
@@ -55,9 +53,9 @@ To be added during the build. Setup guides:
 - [Backend](docs/guides/backend-setup.md)
 - [Frontend](docs/guides/frontend-setup.md)
 
-## Sample SEC data
+## Sample data
 
-Use the standalone downloader to fetch a small local 10-K sample from SEC EDGAR.
+`data/download.py` is the original template's starter downloader — it fetches a small local 10-K sample from SEC EDGAR so the app has something to index out of the box.
 Edit the params at the top of `data/download.py`, especially `USER_AGENT`, then run:
 
 ```bash
@@ -66,3 +64,5 @@ uv run data/download.py
 
 By default this downloads the latest 5 10-K filings for AAPL, MSFT, NVDA, AMZN, and GOOGL into year folders under `data/downloads/` and writes a `manifest.json`.
 Downloaded files are gitignored; the `data/` folder itself stays in git for the script and notes.
+
+For real use, swap this out for your own document set (company policies, guidelines, work instructions) — see [docs/architecture.md](docs/architecture.md) for how ingestion is expected to work.
