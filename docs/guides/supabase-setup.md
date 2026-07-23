@@ -62,6 +62,8 @@ Alembic migrations create and update:
 
 Use the direct/session database connection string for Alembic. Do not use the transaction pooler connection string for migrations.
 
+**Direct connection is IPv6-only.** If your network can't route IPv6 (common on corporate networks), `db.<ref>.supabase.co` will fail to resolve/connect. Use the **Session pooler** string instead (Dashboard → Database → Connection string → Session pooler tab) — it's IPv4-compatible and still session-level, so it works for Alembic. Note the username changes to `postgres.<project-ref>` for pooler connections.
+
 From `backend/`:
 
 ```bash
