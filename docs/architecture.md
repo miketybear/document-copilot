@@ -14,17 +14,17 @@ The best opening diagram is a service-level view that shows the two core paths: 
 flowchart LR
     user[Employee] --> browser[Browser<br/>React chat app]
 
-    subgraph railway[Railway]
+    subgraph onprem[On-Premise<br/>Docker Compose host]
         frontend[Frontend service<br/>Vite build]
         backend[Backend service<br/>FastAPI + PydanticAI]
     end
 
-    subgraph supabase[Supabase]
+    subgraph supabase[Supabase Cloud]
         auth[Auth<br/>email session]
         db[(Postgres<br/>chats, documents, chunks<br/>pgvector + full-text)]
     end
 
-    openai[OpenAI<br/>LLM + embeddings]
+    azureopenai[Azure OpenAI<br/>LLM + embedding deployments]
     corpus[Internal document corpus]
     ingestion[Ingestion pipeline<br/>collect, parse, chunk, embed]
 
@@ -34,11 +34,11 @@ flowchart LR
     browser -->|chat request + JWT| backend
     backend -->|verify user| auth
     backend -->|retrieve passages<br/>persist chats + citations| db
-    backend -->|generate grounded answer| openai
+    backend -->|generate grounded answer| azureopenai
     backend -->|stream answer + citations| browser
 
     corpus --> ingestion
-    ingestion -->|create embeddings| openai
+    ingestion -->|create embeddings| azureopenai
     ingestion -->|store documents + chunks| db
 ```
 
@@ -49,7 +49,7 @@ flowchart LR
 - Use Supabase for identity and durable product state: users, chat threads, source documents, chunks, embeddings, and citation metadata.
 - Use Supabase `pgvector` for semantic retrieval and Postgres full-text search for keyword retrieval.
 - Make the LLM path typed and testable by using PydanticAI agents with explicit dependencies, outputs, and tool boundaries.
-- Preserve a simple deployment model on Railway: one frontend service, one stateless backend service, and hosted Supabase.
+- Preserve a simple deployment model on-premise: one frontend container, one stateless backend container behind a company-managed reverse proxy, running on internal infrastructure via Docker Compose, with Supabase remaining a hosted cloud service for auth and durable state.
 
 ## Stack
 
@@ -67,7 +67,7 @@ Backend:
 - FastAPI + Uvicorn
 - Pydantic v2 + pydantic-settings
 - PydanticAI for typed LLM orchestration
-- OpenAI SDK for generation and embeddings
+- OpenAI SDK configured for Azure OpenAI (`AzureOpenAI` client) for generation and embeddings
 - Supabase Python client for server-side database access
 - SQLAlchemy models + Alembic migrations for schema management
 - Supabase `pgvector` for semantic search
@@ -82,7 +82,7 @@ Persistence:
 
 ## System Boundaries
 
-The frontend is responsible for user interaction, local UI state, and sending the authenticated user's request to the backend. It should never hold service-role credentials, run retrieval logic, call OpenAI directly, or write privileged records to Supabase.
+The frontend is responsible for user interaction, local UI state, and sending the authenticated user's request to the backend. It should never hold service-role credentials, run retrieval logic, call Azure OpenAI directly, or write privileged records to Supabase.
 
 The backend is responsible for request authorization, retrieval, prompt construction, LLM execution, citation validation, streaming responses, and durable persistence. It owns all privileged credentials and is the only service allowed to use the Supabase service-role key.
 
@@ -200,7 +200,7 @@ Retrieval and grounding remain independent from PydanticAI. This keeps ingestion
 
 Document Copilot uses hybrid retrieval:
 
-1. Embed the user's query with the configured OpenAI embedding model.
+1. Embed the user's query with the configured Azure OpenAI embedding deployment.
 2. Run a semantic search over `document_chunks.embedding` with `pgvector`.
 3. Run a lexical search over `document_chunks.search_vector` with Postgres full-text search.
 4. Fuse the two ranked lists in Python with Reciprocal Rank Fusion.
@@ -363,20 +363,29 @@ Backend settings:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL` for Alembic and direct Postgres access
-- `OPENAI_API_KEY`
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_API_VERSION`
+- `AZURE_OPENAI_CHAT_DEPLOYMENT`
+- `AZURE_OPENAI_EMBEDDING_DEPLOYMENT`
 - `ALLOWED_ORIGINS`
-- embedding model name and dimensions
+- embedding dimensions (must match the embedding deployment's model)
 
 Do not read environment variables directly from components, route handlers, or services. Frontend code should use `src/lib/env.ts`. Backend code should use `app/config.py`.
 
 ## Deployment Shape
 
-Railway should run two services:
+The app runs on-premise via Docker Compose on a company-managed server:
 
-- Frontend: static Vite build served as a web app.
-- Backend: FastAPI service running Uvicorn.
+- Frontend container: static Vite build served by a lightweight web server.
+- Backend container: FastAPI service running Uvicorn.
+- A reverse proxy (e.g. Nginx or Caddy) in front of both containers terminates TLS and routes `/` to the frontend and `/api` (or a dedicated subdomain) to the backend.
 
-Supabase remains hosted and stores the durable retrieval data. The Railway backend can stay stateless because document chunks, embeddings, full-text search vectors, chats, and citations all live in Supabase Postgres. Raw source files (PDF/DOCX/PPT) remain gitignored local ingestion inputs unless a later workflow stores them in object storage.
+Both containers need outbound HTTPS access to two external endpoints: Supabase Cloud (auth + Postgres) and the Azure OpenAI endpoint. No inbound access from either external service is required, so the host can sit behind the company firewall with only the reverse proxy's port exposed to employees.
+
+Supabase remains hosted and stores the durable retrieval data. The backend can stay stateless because document chunks, embeddings, full-text search vectors, chats, and citations all live in Supabase Postgres — this means container restarts, redeploys, or moving to a different on-prem host do not risk data loss. Raw source files (PDF/DOCX/PPT) remain gitignored local ingestion inputs unless a later workflow stores them in object storage.
+
+Because the frontend and backend are stateless containers, the compose file, environment configuration, and reverse-proxy config should be treated as the deployment's source of truth and kept in version control (secrets excluded).
 
 ## Implementation Sequence
 
@@ -397,7 +406,7 @@ Supabase remains hosted and stores the durable retrieval data. The Railway backe
 ## Non-Goals
 
 - No Next.js, SSR, server components, or frontend route handlers.
-- No direct OpenAI calls from the browser.
+- No direct Azure OpenAI calls from the browser.
 - No separate managed vector database outside Supabase.
 - No per-document or per-department access control in v1: every authenticated employee can retrieve every current document. This keeps the first version simple; see Future Considerations for how to add it later without a rearchitecture.
 - No external market/news data.
