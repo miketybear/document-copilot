@@ -23,8 +23,8 @@ document-copilot/
 ├── README.md
 ├── data/               # local corpus + download script (payloads gitignored)
 ├── docs/               # specs, briefs, design notes
-├── backend/            # FastAPI service (see backend/AGENTS.md)
-└── frontend/           # React SPA (see frontend/AGENTS.md)
+├── backend/            # FastAPI service (see backend/CLAUDE.md)
+└── frontend/           # React SPA (see frontend/CLAUDE.md)
 ```
 
 ## Dependency policy
@@ -48,7 +48,7 @@ Before adding a runtime dep, answer in the commit message:
 2. How often does it get used?
 3. What's its maintenance / transitive-dep footprint?
 
-Per-stack specifics live in `backend/AGENTS.md` and `frontend/AGENTS.md`.
+Per-stack specifics live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
 
 ## Configuration
 
