@@ -1,8 +1,9 @@
 import { Route, Routes } from 'react-router'
 
 import { RequireAuth } from '@/components/RequireAuth'
-import { Home } from '@/pages/Home'
 import { SignIn } from '@/pages/auth/SignIn'
+import { ChatPage } from '@/pages/chat/ChatPage'
+import { NewChat } from '@/pages/chat/NewChat'
 
 function App() {
   return (
@@ -12,7 +13,15 @@ function App() {
         path="/"
         element={
           <RequireAuth>
-            <Home />
+            <NewChat />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/chat/:threadId"
+        element={
+          <RequireAuth>
+            <ChatPage />
           </RequireAuth>
         }
       />
