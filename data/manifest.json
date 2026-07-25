@@ -1,0 +1,29 @@
+[
+  {
+    "file": "HUMAN_RESOURCE_POLICIES_-_GESCI__June_2018.pdf",
+    "title": "Human Resource Policies and Procedure Manual (HRPPM)",
+    "document_type": "policy",
+    "department": "Human Resources",
+    "owner": "GESCI",
+    "version": "2018 Revision",
+    "effective_date": "2018-06-21"
+  },
+  {
+    "file": "SO-TAY-NHAN-VIEN.pdf",
+    "title": "Sổ Tay Doanh Nghiệp",
+    "document_type": "policy",
+    "department": "Human Resources",
+    "owner": "Unica",
+    "version": "1.0",
+    "effective_date": null
+  },
+  {
+    "file": "BDOPSMNRI3110.pdf",
+    "title": "Safety Level Transmitter (DP) with Diaphragm Seal Maintenance Instruction",
+    "document_type": "work_instruction",
+    "department": "Operations & Maintenance",
+    "owner": "Bien Dong Petroleum Operating Company",
+    "version": "Rev. 02",
+    "effective_date": "2016-12-15"
+  }
+]

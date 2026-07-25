@@ -12,6 +12,9 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    # Classic Azure OpenAI REST endpoint (bare resource root), as used by the embedding
+    # deployment. The chat deployment may need a different endpoint style — verify when
+    # wiring up Phase 7, don't assume this one applies to chat too.
     azure_openai_endpoint: str
     azure_openai_api_key: str
     azure_openai_api_version: str
