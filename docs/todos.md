@@ -36,26 +36,34 @@ Quy tắc chung: mỗi phase là một **lát cắt dọc** (vertical slice) ch�
 
 ## Phase 4 — Chat plumbing, stub trước (both)
 
-- [ ] `frontend/src/lib/http.ts` + `api.ts` — fetch wrapper, tự inject bearer token, typed `ApiError`
-- [ ] Backend: endpoint tạo/list/get chat thread (chưa có LLM thật)
-- [ ] Backend: `POST /chat/stream` — stub trả lời cố định, đúng format AI SDK stream
-- [ ] Frontend: chat UI shell dùng `useChat` từ Vercel AI SDK, trỏ vào `/chat/stream`
-- [ ] Chạy thử trong browser: gõ câu hỏi → thấy text stream về, dù nội dung là giả
+- [x] `frontend/src/lib/http.ts` + `api.ts` — fetch wrapper, tự inject bearer token, typed `ApiError`
+- [x] Backend: `database/chats.py` dùng user-scoped Supabase client (JWT của user) + RLS đã bật ở Phase 2, không dùng service-role cho chat data
+- [x] Backend: `POST/GET /chat/threads`, `GET /chat/threads/{id}` — tạo/list/get thread (chưa có LLM thật)
+- [x] Backend: `POST /chat/stream` — stub trả lời cố định, đúng UI Message Stream Protocol (verify trực tiếp từ package `ai` đã cài, không đoán)
+- [x] Frontend: chat UI (`ChatPage`, `ChatConversation`, `ChatMessageList`, `ChatInput`) dùng `useChat` từ `@ai-sdk/react`, trỏ vào `/chat/stream`; thay route `/` từ Home smoke-test cũ
+- [x] Test trong browser: gõ câu hỏi → text stream về đúng → refresh/mở lại thread → lịch sử load đúng → thread không tồn tại/không phải của mình → hiện lỗi rõ ràng (không treo trắng trang)
+- [x] Fix 2 bug phát hiện khi test: `NewChat` tạo trùng 2 thread do StrictMode double-effect (thiếu guard); `ChatPage` treo vô hạn ở "Loading…" khi `getThread` lỗi (thiếu `.catch`)
 
 ## Phase 5 — Ingestion pipeline (backend)
 
-- [ ] `ingest/` script: PDF/DOCX/PPT → Markdown chuẩn hóa
-- [ ] Chunking theo heading, giữ `heading path`
-- [ ] Gọi Azure OpenAI embedding deployment cho từng chunk
-- [ ] Ghi `source_documents` + `document_chunks` vào Supabase (kèm `document_type`, `department`, `version`, `status`)
+- [x] `ingest/convert.py` — PDF/DOCX/PPT → Markdown chuẩn hóa qua **docling** (OCR tự động cho PDF scan, đã verify thật với 1 file scan)
+- [x] `ingest/chunk.py` — chunking theo heading (`heading_path`), đếm token bằng `tiktoken`
+- [x] `ingest/embed.py` — gọi Azure OpenAI embedding deployment (`AzureOpenAI` client, endpoint dạng `*.cognitiveservices.azure.com`, truyền `dimensions` tường minh để khớp schema)
+- [x] `ingest/load.py` — ghi `source_documents` + `document_chunks` qua service-role client; logic supersede (version mới → row cũ chuyển `status=superseded` + `superseded_by`) đã test riêng
+- [x] `data/manifest.json` + `ingest/run.py` — CLI orchestrator, chạy thật trên 3 tài liệu thật (2 demo HR policy EN/VN + 1 Work Instruction thật của BDPOC dạng scan)
+- [x] Verify trong Supabase: 3 `source_documents` (đủ metadata), 291 `document_chunks` (embedding + search_vector đầy đủ), OCR đọc đúng nội dung kỹ thuật từ file scan
+- [x] Debug thật với Azure AI Foundry: sửa endpoint sai (dư path `/responses`, dư `/api/projects/...`), sai tên deployment (`-small` vs `-large`), `api_version` không hợp lệ — cuối cùng chốt `AzureOpenAI` client + endpoint `*.cognitiveservices.azure.com` (bare root) + `api_version=2024-10-21`
 
 ## Phase 6 — Retrieval (backend)
 
-- [ ] Query `pgvector` semantic search trên `document_chunks.embedding`
-- [ ] Query Postgres full-text search trên `search_vector`
-- [ ] Reciprocal Rank Fusion (Python) gộp 2 danh sách
-- [ ] `retrieval/retriever.py` expose bounded tools: `search_documents`, `read_chunk`, `read_surrounding_chunks`
-- [ ] Unit test retrieval (không cần LLM)
+- [x] Migration mới: 2 Postgres RPC function `search_chunks_semantic`/`search_chunks_fulltext` (`SECURITY INVOKER`, giữ nguyên RLS)
+- [x] `app/embeddings.py` — tách logic embedding dùng chung cho `ingest/` và `retrieval/` (ingest phụ thuộc app, không ngược lại)
+- [x] `app/retrieval/queries.py` — gọi 2 RPC qua user-scoped Supabase client
+- [x] `app/retrieval/fusion.py` — Reciprocal Rank Fusion thuần Python
+- [x] `app/retrieval/retriever.py` — 3 bounded tools: `search_documents`, `read_chunk`, `read_surrounding_chunks`; type `SourcePassage`
+- [x] Thêm `pytest`/`pytest-asyncio`; 12 test (4 unit fusion, 5 mocked retriever, 3 integration thật) — tất cả pass
+- [x] Verify thật: search "safety level transmitter" trả đúng chunk từ đúng tài liệu Work Instruction
+- [x] Fix bug test isolation: cache client Supabase ở module-level (đúng cho production) xung đột với event loop riêng của mỗi test → thêm fixture reset cache trong `conftest.py`
 
 ## Phase 7 — LLM orchestration thật (backend)
 
