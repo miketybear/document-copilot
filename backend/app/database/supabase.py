@@ -20,3 +20,10 @@ async def get_service_role_client() -> AsyncClient:
     if _service_role_client is None:
         _service_role_client = await create_async_client(settings.supabase_url, settings.supabase_service_role_key)
     return _service_role_client
+
+
+async def get_user_scoped_client(access_token: str) -> AsyncClient:
+    """Per-request client acting as the given user — Postgres RLS enforces row ownership."""
+    client = await create_async_client(settings.supabase_url, settings.supabase_anon_key)
+    client.postgrest.auth(access_token)
+    return client

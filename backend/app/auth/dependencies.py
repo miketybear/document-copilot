@@ -13,6 +13,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 class AuthenticatedUser:
     id: str
     email: str
+    access_token: str
 
 
 async def get_current_user(
@@ -34,4 +35,4 @@ async def get_current_user(
     service_role_client = await get_service_role_client()
     await service_role_client.table("users").upsert({"id": user.id, "email": user.email}).execute()
 
-    return AuthenticatedUser(id=user.id, email=user.email)
+    return AuthenticatedUser(id=user.id, email=user.email, access_token=credentials.credentials)
