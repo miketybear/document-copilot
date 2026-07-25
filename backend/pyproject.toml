@@ -4,7 +4,9 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "alembic==1.18.5",
+    "docling==2.113.0",
     "fastapi==0.139.1",
+    "openai==2.46.0",
     "pgvector==0.5.0",
     "psycopg[binary]==3.3.4",
     "pydantic-settings==2.14.2",
@@ -12,9 +14,22 @@ dependencies = [
     "sqlalchemy==2.0.51",
     "structlog==26.1.0",
     "supabase==2.31.0",
+    "tiktoken==0.13.0",
     "uvicorn[standard]==0.51.0",
 ]
 
 [tool.uv]
 add-bounds = "exact"
 exclude-newer = "7 days"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "integration: requires live Supabase/Azure OpenAI credentials",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+]
