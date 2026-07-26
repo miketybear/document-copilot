@@ -41,3 +41,11 @@ async def append_message(user: AuthenticatedUser, thread_id: str, role: str, con
         .execute()
     )
     return response.data[0]
+
+
+async def append_citations(user: AuthenticatedUser, message_id: str, chunk_ids: list[str]) -> None:
+    if not chunk_ids:
+        return
+    client = await get_user_scoped_client(user.access_token)
+    rows = [{"message_id": message_id, "chunk_id": chunk_id} for chunk_id in chunk_ids]
+    await client.table("message_citations").insert(rows).execute()

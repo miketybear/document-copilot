@@ -1,3 +1,5 @@
+import uuid
+
 from supabase import AsyncClient
 
 from app.embeddings import embed_query
@@ -52,12 +54,23 @@ async def read_surrounding_chunks(
 
 
 async def _fetch_passages(client: AsyncClient, chunk_ids: list[str]) -> list[SourcePassage]:
-    if not chunk_ids:
+    # chunk_ids may come straight from an LLM tool call — treat as untrusted, drop anything
+    # that isn't a real UUID rather than letting a malformed one 500 the whole request.
+    valid_ids = [chunk_id for chunk_id in chunk_ids if _is_uuid(chunk_id)]
+    if not valid_ids:
         return []
 
-    response = await client.table("document_chunks").select(_PASSAGE_SELECT).in_("id", chunk_ids).execute()
+    response = await client.table("document_chunks").select(_PASSAGE_SELECT).in_("id", valid_ids).execute()
     by_id = {row["id"]: _row_to_passage(row) for row in response.data}
     return [by_id[chunk_id] for chunk_id in chunk_ids if chunk_id in by_id]
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(value)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def _row_to_passage(row: dict) -> SourcePassage:

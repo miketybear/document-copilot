@@ -32,3 +32,9 @@ async def stream_text_reply(message_id: str, text: str) -> AsyncIterator[str]:
     yield _sse({"type": "finish-step"})
     yield _sse({"type": "finish"})
     yield "data: [DONE]\n\n"
+
+
+async def stream_error(error_text: str) -> AsyncIterator[str]:
+    """Emits a controlled failure instead of a polished-but-unsupported answer."""
+    yield _sse({"type": "error", "errorText": error_text})
+    yield "data: [DONE]\n\n"

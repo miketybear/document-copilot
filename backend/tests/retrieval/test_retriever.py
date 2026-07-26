@@ -8,7 +8,7 @@ DOC_META = {
     "effective_date": "2024-01-01",
 }
 ROW_A = {
-    "id": "chunk-a",
+    "id": "11111111-1111-1111-1111-111111111111",
     "document_id": "doc-1",
     "chunk_index": 0,
     "heading_path": ["Intro"],
@@ -16,7 +16,7 @@ ROW_A = {
     "source_documents": DOC_META,
 }
 ROW_B = {
-    "id": "chunk-b",
+    "id": "22222222-2222-2222-2222-222222222222",
     "document_id": "doc-1",
     "chunk_index": 1,
     "heading_path": ["Intro"],
@@ -82,14 +82,14 @@ async def test_search_documents_fuses_rankings_and_returns_passages(monkeypatch)
     client = FakeClient(
         table_rows=[ROW_A, ROW_B],
         rpc_rows={
-            "search_chunks_semantic": [{"id": "chunk-a"}, {"id": "chunk-b"}],
-            "search_chunks_fulltext": [{"id": "chunk-a"}, {"id": "chunk-b"}],
+            "search_chunks_semantic": [{"id": "11111111-1111-1111-1111-111111111111"}, {"id": "22222222-2222-2222-2222-222222222222"}],
+            "search_chunks_fulltext": [{"id": "11111111-1111-1111-1111-111111111111"}, {"id": "22222222-2222-2222-2222-222222222222"}],
         },
     )
 
     results = await retriever.search_documents(client, "some query", k=2)
 
-    assert [p.chunk_id for p in results] == ["chunk-a", "chunk-b"]
+    assert [p.chunk_id for p in results] == ["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]
     assert results[0].document_title == "Doc One"
     assert results[0].heading_path == ["Intro"]
 
@@ -107,10 +107,10 @@ async def test_search_documents_with_no_matches_returns_empty(monkeypatch):
 async def test_read_chunk_returns_matching_passage():
     client = FakeClient(table_rows=[ROW_A], rpc_rows={})
 
-    passage = await retriever.read_chunk(client, "chunk-a")
+    passage = await retriever.read_chunk(client, "11111111-1111-1111-1111-111111111111")
 
     assert passage is not None
-    assert passage.chunk_id == "chunk-a"
+    assert passage.chunk_id == "11111111-1111-1111-1111-111111111111"
     assert passage.chunk_text == "text a"
 
 
@@ -123,6 +123,6 @@ async def test_read_chunk_returns_none_when_missing():
 async def test_read_surrounding_chunks_returns_neighbors():
     client = FakeClient(table_rows=[ROW_A, ROW_B], rpc_rows={})
 
-    passages = await retriever.read_surrounding_chunks(client, "chunk-a", before=1, after=1)
+    passages = await retriever.read_surrounding_chunks(client, "11111111-1111-1111-1111-111111111111", before=1, after=1)
 
-    assert [p.chunk_id for p in passages] == ["chunk-a", "chunk-b"]
+    assert [p.chunk_id for p in passages] == ["11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222"]

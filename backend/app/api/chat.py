@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.auth.dependencies import AuthenticatedUser, get_current_user
 from app.chat.messages import ChatStreamRequest
-from app.chat.orchestrator import run_stub_turn
+from app.chat.orchestrator import run_turn
 from app.chat.streaming import UI_MESSAGE_STREAM_HEADERS
 from app.database import chats
 
@@ -45,4 +45,4 @@ async def stream_chat(
     if thread is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
 
-    return StreamingResponse(run_stub_turn(user, request), headers=UI_MESSAGE_STREAM_HEADERS)
+    return StreamingResponse(run_turn(user, request), headers=UI_MESSAGE_STREAM_HEADERS)
