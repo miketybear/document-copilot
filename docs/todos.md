@@ -67,10 +67,15 @@ Quy tắc chung: mỗi phase là một **lát cắt dọc** (vertical slice) ch�
 
 ## Phase 7 — LLM orchestration thật (backend)
 
-- [ ] `assistant/agent.py`, `deps.py`, `outputs.py` (`GroundedAnswer`, `Citation`, `SourcePassage`), `instructions.md`
-- [ ] `chat/orchestrator.py` — nối retrieval → agent → streaming → persist
-- [ ] `grounding/validator.py` — enforce: mọi claim phải có citation, citation phải trỏ đúng passage đã retrieve
-- [ ] Thay stub ở Phase 4 bằng response thật, test bằng câu hỏi thực tế với data đã ingest
+- [x] Thêm `pydantic-ai`; verify thật API (`Agent`, `@agent.tool`, `AzureProvider`) và endpoint chat model — hóa ra cùng cấu hình `AzureOpenAI` cổ điển đã verify cho embedding ở Phase 5 dùng được luôn cho chat, chỉ đổi tên deployment
+- [x] `assistant/outputs.py` (`GroundedAnswer`, `Citation`), `deps.py` (`DocumentAgentDeps`), `instructions.md` (product contract: chỉ trả lời từ passage đã retrieve, cite mọi claim, nói rõ khi thiếu bằng chứng, không diễn giải ràng buộc, **citation chỉ ở field structured, không nhét thô vào câu trả lời**)
+- [x] `assistant/agent.py` — đăng ký 3 tool Phase 6 làm agent tools
+- [x] `grounding/validator.py` — enforce citation phải trỏ đúng chunk đã retrieve trong lượt chạy này
+- [x] `chat/orchestrator.py` viết lại — chạy agent xong → validate → nếu pass thì giả lập stream + persist message + persist `message_citations`; nếu fail thì trả lỗi có kiểm soát, không stream câu trả lời chưa validate
+- [x] Thêm INSERT policy còn thiếu cho `message_citations` (Phase 2 chỉ có SELECT)
+- [x] Test: 4 unit validator, 3 mocked orchestrator (bao gồm case citation "bịa" phải bị chặn), 2 integration thật (câu hỏi thật + câu hỏi ngoài phạm vi corpus) — tất cả pass
+- [x] Test thủ công qua UI thật: 2 câu hỏi thật ("safety level transmitter maintenance", "maternity leave policy") → trả lời đúng, citation đúng tài liệu, verify trong `message_citations`
+- [x] Fix bug thật: agent tự "nhớ nhầm" chunk_id (UUID sai) khi gọi tool → Postgres lỗi crash cả request → thêm validate UUID ở boundary trong `retriever.py` trước khi query
 
 ## Phase 8 — UI hoàn thiện (frontend)
 
