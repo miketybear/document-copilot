@@ -16,8 +16,8 @@ def _sse(chunk: dict) -> str:
     return f"data: {json.dumps(chunk)}\n\n"
 
 
-async def stream_text_reply(message_id: str, text: str) -> AsyncIterator[str]:
-    """Emits a UI Message Stream Protocol response for a single text-only assistant message."""
+async def stream_text_reply(message_id: str, text: str, citation_parts: list[dict]) -> AsyncIterator[str]:
+    """Emits a UI Message Stream Protocol response for a text answer plus its citation data parts."""
     yield _sse({"type": "start", "messageId": message_id})
     yield _sse({"type": "start-step"})
     yield _sse({"type": "text-start", "id": message_id})
@@ -29,6 +29,10 @@ async def stream_text_reply(message_id: str, text: str) -> AsyncIterator[str]:
         await asyncio.sleep(0.05)
 
     yield _sse({"type": "text-end", "id": message_id})
+
+    for part in citation_parts:
+        yield _sse(part)
+
     yield _sse({"type": "finish-step"})
     yield _sse({"type": "finish"})
     yield "data: [DONE]\n\n"

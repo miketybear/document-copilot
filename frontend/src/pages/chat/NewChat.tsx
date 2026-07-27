@@ -1,20 +1,38 @@
-import { useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router'
 
+import { ChatInput } from '@/components/chat/ChatInput'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { api } from '@/lib/api'
+
+function greeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export function NewChat() {
   const navigate = useNavigate()
-  const hasCreated = useRef(false)
+  const [creating, setCreating] = useState(false)
 
-  useEffect(() => {
-    if (hasCreated.current) return
-    hasCreated.current = true
+  async function handleSend(text: string) {
+    setCreating(true)
+    const thread = await api.chat.createThread()
+    navigate(`/chat/${thread.id}`, { replace: true, state: { firstMessage: text } })
+  }
 
-    api.chat.createThread().then((thread) => {
-      navigate(`/chat/${thread.id}`, { replace: true })
-    })
-  }, [navigate])
-
-  return <div className="flex min-h-svh items-center justify-center text-muted-foreground">Loading…</div>
+  return (
+    <div className="flex h-full flex-col">
+      <div className="p-3 md:hidden">
+        <SidebarTrigger />
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
+        <h1 className="text-2xl font-semibold text-foreground">{greeting()}</h1>
+        <div className="w-full max-w-2xl">
+          <ChatInput disabled={creating} onSend={handleSend} />
+        </div>
+      </div>
+    </div>
+  )
 }

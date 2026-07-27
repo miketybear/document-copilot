@@ -30,6 +30,9 @@ pnpm-debug.log*
 !/data/downloads/.gitkeep
 *.parquet
 
+# Claude Code worktrees (full nested checkouts created by background agent tasks)
+.claude/worktrees/
+
 # IDE / OS
 .vscode/
 .idea/

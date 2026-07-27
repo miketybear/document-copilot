@@ -6,6 +6,7 @@ export type ChatThread = {
   id: string
   user_id: string
   title: string | null
+  pinned_at: string | null
   created_at: string
   updated_at: string
 }
@@ -28,5 +29,8 @@ export const api = {
     listThreads: () => http.get<ChatThread[]>('/chat/threads'),
     createThread: (title?: string) => http.post<ChatThread>('/chat/threads', { title }),
     getThread: (id: string) => http.get<ChatThreadWithMessages>(`/chat/threads/${id}`),
+    setThreadPinned: (id: string, pinned: boolean) =>
+      http.patch<ChatThread>(`/chat/threads/${id}`, { pinned }),
+    deleteThread: (id: string) => http.delete<void>(`/chat/threads/${id}`),
   },
 }

@@ -79,9 +79,15 @@ Quy tắc chung: mỗi phase là một **lát cắt dọc** (vertical slice) ch�
 
 ## Phase 8 — UI hoàn thiện (frontend)
 
-- [ ] Component hiển thị citation + source passage (company/tài liệu, section, excerpt)
-- [ ] Empty state (không đủ evidence), streaming status, error state theo bảng lỗi trong architecture.md
-- [ ] `pnpm tsc --noEmit` + `pnpm lint` sạch (nhớ: dự án này không viết frontend test)
+- [x] Component hiển thị citation + source passage (company/tài liệu, section, excerpt) — `Citation.tsx`, excerpt rút gọn + "Show more"
+- [x] Backend: stream + persist citation làm structured `data-citation` UI message part (trước đó Phase 7 mới ghi vào `message_citations`, không đẩy metadata ra client) — `chat/streaming.py`, `chat/messages.py`, `chat/orchestrator.py`
+- [x] Backend: fix rò rỉ exception nội bộ ra `errorText` gửi cho client — log qua `structlog`, chỉ stream message cố định thân thiện
+- [x] Empty state (không đủ evidence), streaming status ("Searching documents…" / "Answering…"), error state (404/401/network/grounding-failure) theo bảng lỗi trong architecture.md — `chatErrors.ts`
+- [x] `pnpm tsc --noEmit` + `pnpm lint` sạch (nhớ: dự án này không viết frontend test)
+- [x] Test thủ công qua UI thật: câu hỏi có evidence (6 citation đúng tài liệu, excerpt expand/collapse) → câu hỏi ngoài phạm vi (empty state) → reload page (citation persist đúng) → thread không tồn tại (404 friendly) → tắt backend giữa chừng (network error friendly, console giữ raw error) → backend sống lại, gửi tiếp bình thường
+- [x] Bug phát hiện khi test (ngoài phạm vi Phase 8, đã tách task riêng): `chunk_text` của tài liệu scan chứa HTML entity chưa decode (`&gt;`, `&amp;`) — lỗi ở ingestion pipeline Phase 5, không phải UI
+- [x] Loạt cải tiến UI/UX theo yêu cầu sau khi Phase 8 xong: redesign theme (teal/slate palette, Geist Mono cho metadata), app shell với sidebar (danh sách thread theo Pinned/Today/Earlier, pin/delete có confirm dialog, dark mode toggle theo OS + lưu localStorage, scrollbar CSS thuần), auto-derive thread title từ câu hỏi đầu (`derive_title`), ẩn thread chưa có title khỏi sidebar tới khi lượt đầu xong, landing page mới cho "New chat" (greeting + input giữa màn hình, chỉ tạo thread khi gửi tin nhắn đầu — giống ChatGPT/Claude), render markdown thật cho câu trả lời (`react-markdown`, bullet/numbered list đúng thay vì dồn 1 đoạn)
+- [x] Bug phát hiện thêm, đã tách task riêng: model đôi khi in literal `[citation]` trong câu trả lời — vi phạm chính `instructions.md` (citation chỉ nên ở structured field)
 
 ## Phase 9 — Deploy on-prem
 

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from app.auth.dependencies import AuthenticatedUser
 from app.database.supabase import get_user_scoped_client
 
@@ -41,6 +43,23 @@ async def append_message(user: AuthenticatedUser, thread_id: str, role: str, con
         .execute()
     )
     return response.data[0]
+
+
+async def set_thread_title(user: AuthenticatedUser, thread_id: str, title: str) -> None:
+    client = await get_user_scoped_client(user.access_token)
+    await client.table("chat_threads").update({"title": title}).eq("id", thread_id).execute()
+
+
+async def set_thread_pinned(user: AuthenticatedUser, thread_id: str, pinned: bool) -> dict:
+    client = await get_user_scoped_client(user.access_token)
+    pinned_at = datetime.now(UTC).isoformat() if pinned else None
+    response = await client.table("chat_threads").update({"pinned_at": pinned_at}).eq("id", thread_id).execute()
+    return response.data[0]
+
+
+async def delete_thread(user: AuthenticatedUser, thread_id: str) -> None:
+    client = await get_user_scoped_client(user.access_token)
+    await client.table("chat_threads").delete().eq("id", thread_id).execute()
 
 
 async def append_citations(user: AuthenticatedUser, message_id: str, chunk_ids: list[str]) -> None:

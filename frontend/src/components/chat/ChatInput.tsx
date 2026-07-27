@@ -1,25 +1,40 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 export function ChatInput({ disabled, onSend }: { disabled: boolean; onSend: (text: string) => void }) {
   const [text, setText] = useState('')
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function submit() {
     if (!text.trim()) return
     onSend(text)
     setText('')
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault()
+      submit()
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <Input
+    <form
+      onSubmit={(event) => {
+        event.preventDefault()
+        submit()
+      }}
+      className="flex items-end gap-2 rounded-lg border border-input bg-secondary p-1.5 pl-3.5"
+    >
+      <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder="Ask a question..."
         disabled={disabled}
+        rows={1}
+        className="max-h-40 min-h-0 resize-none overflow-y-auto border-none bg-transparent py-1.5 shadow-none focus-visible:ring-0"
       />
       <Button type="submit" disabled={disabled || !text.trim()}>
         Send
