@@ -98,6 +98,8 @@ Yêu cầu thật: công ty tự dùng Entra ID, 1 khách hàng dùng Google Wor
 - [x] Frontend: `env.ts` thêm `VITE_SSO_PROVIDERS` (danh sách provider cho phép, fail-fast nếu giá trị lạ), `SignIn.tsx` hiện nút "Continue with Microsoft"/"Continue with Google" phía trên form email/password khi được cấu hình — dùng thẳng `supabase.auth.signInWithOAuth()`, không cần route callback riêng (`detectSessionInUrl` mặc định của `@supabase/supabase-js` tự xử lý)
 - [x] Test: không cấu hình → giữ nguyên UI cũ (email/password only); cấu hình `azure,google` → hiện đúng 2 nút; giá trị provider sai → app fail-fast thay vì âm thầm bỏ qua
 - [x] Cập nhật tài liệu: `frontend/CLAUDE.md`, `docs/architecture.md` (thêm mục "SSO (Entra ID, Google Workspace)"), `docs/guides/supabase-setup.md`, `docs/guides/sso-setup.md` (mới — hướng dẫn đăng ký app trên Entra ID/Google Cloud Console + bật provider trên Supabase Dashboard, các bước này ngoài phạm vi code, phải làm tay)
+- [x] Test thật với Entra ID (tài khoản công ty `biendongpoc.vn`), qua Edge, MFA Authenticator thật: bấm "Continue with Microsoft" → Seamless SSO tự nhận tài khoản Windows → approve MFA → đăng nhập thành công vào app
+- [x] Bug thật gặp phải khi test: redirect về app không lỗi hiển thị nhưng không có session — do Entra ID không trả `email` claim mặc định, Supabase báo `Error getting user email from external provider` (thấy qua Network tab, response header `location` của request `token?grant_type=pkce`). Fix: Azure Portal → App registration → Token configuration → Add optional claim → ID token → `email`. Đã ghi lại thành bước bắt buộc + troubleshooting note trong `docs/guides/sso-setup.md`
 
 ## Phase 9 — Deploy on-prem
 
