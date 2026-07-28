@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 
+import { GoogleIcon, MicrosoftIcon } from '@/components/icons/SsoIcons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +13,11 @@ type Mode = 'sign-in' | 'sign-up'
 const SSO_LABELS: Record<SsoProvider, string> = {
   azure: 'Continue with Microsoft',
   google: 'Continue with Google',
+}
+
+const SSO_ICONS: Record<SsoProvider, typeof MicrosoftIcon> = {
+  azure: MicrosoftIcon,
+  google: GoogleIcon,
 }
 
 export function SignIn() {
@@ -62,16 +68,20 @@ export function SignIn() {
 
         {env.ssoProviders.length > 0 && (
           <div className="flex flex-col gap-2">
-            {env.ssoProviders.map((provider) => (
-              <Button
-                key={provider}
-                type="button"
-                variant="outline"
-                onClick={() => handleSsoSignIn(provider)}
-              >
-                {SSO_LABELS[provider]}
-              </Button>
-            ))}
+            {env.ssoProviders.map((provider) => {
+              const Icon = SSO_ICONS[provider]
+              return (
+                <Button
+                  key={provider}
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleSsoSignIn(provider)}
+                >
+                  <Icon className="size-4" />
+                  {SSO_LABELS[provider]}
+                </Button>
+              )
+            })}
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="h-px flex-1 bg-border" />
