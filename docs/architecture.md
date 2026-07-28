@@ -20,7 +20,7 @@ flowchart LR
     end
 
     subgraph supabase[Supabase Cloud]
-        auth[Auth<br/>email session]
+        auth[Auth<br/>email + SSO session]
         db[(Postgres<br/>chats, documents, chunks<br/>pgvector + full-text)]
     end
 
@@ -77,7 +77,7 @@ Backend:
 
 Persistence:
 
-- Supabase Auth for email login
+- Supabase Auth for login — email/password by default, with per-deployment SSO (Entra ID, Google Workspace) available through Supabase's OAuth providers
 - Supabase Postgres for user records, chat threads, chat messages, source documents, chunks, embeddings, full-text search vectors, and citation metadata
 
 ## System Boundaries
@@ -90,7 +90,7 @@ Supabase is responsible for authentication and durable product state. Browser ac
 
 ## Request Flow
 
-1. The user signs in with Supabase email auth in the React SPA.
+1. The user signs in with Supabase Auth in the React SPA — email/password, or an SSO provider (Entra ID, Google Workspace) if this deployment has one configured.
 2. The frontend stores the Supabase session through `@supabase/supabase-js`.
 3. When the user opens a chat, the frontend loads the thread and prior messages through FastAPI, which reads user-scoped records from Supabase.
 4. The chat UI uses the Vercel AI SDK React primitives to manage message state and submit new user messages to the FastAPI chat endpoint.
@@ -230,6 +230,18 @@ Backend rules:
 - Always attach persisted chat records to the authenticated `user_id`.
 
 The backend can verify the JWT by calling Supabase Auth's user endpoint or by validating the project's JWT signing keys. For the first implementation, calling Supabase Auth is simpler and avoids local JWT validation mistakes. If request volume grows, local JWT verification can be added behind the same `AuthService` interface.
+
+### SSO (Entra ID, Google Workspace)
+
+Different customers need different identity providers (this company's own Entra ID tenant, a customer's Google Workspace, or plain email/password for a simple deployment). Supabase Auth already normalizes this: it acts as an OIDC relying party for external providers and issues the same JWT shape regardless of how the user authenticated, so `app/auth/dependencies.py` needs **no code change** to support SSO — `anon_client.auth.get_user(token)` verifies an Entra ID- or Google-issued session exactly like an email/password one.
+
+What does change per deployment:
+
+- **Provider registration** happens outside this repo: an app registration in the customer's Entra ID tenant, or an OAuth client in Google Cloud Console, each pointed at the Supabase project's OAuth callback URL. See `docs/guides/sso-setup.md`.
+- **Enabling the provider** happens in the Supabase Dashboard (Authentication → Providers) for that deployment's project — not in application config.
+- **Which SSO button(s) the frontend shows** is controlled by `VITE_SSO_PROVIDERS` (comma-separated, e.g. `azure` or `azure,google`), read once in `frontend/src/lib/env.ts`. Empty means email/password only.
+
+This is a per-deployment configuration difference, not a code branch — each customer gets one build/deployment with its own env, not one app instance serving multiple auth modes at runtime. A generic pluggable `AuthVerifier` abstraction is deliberately not introduced yet: every provider available today (email/password, Entra ID, Google) already goes through the identical Supabase-JWT verification path. Only add that abstraction if a customer needs an identity source Supabase Auth can't broker (e.g., a gateway that pre-authenticates and forwards a trusted header) — a concrete second implementation, not a hypothetical one.
 
 Recommended backend units:
 

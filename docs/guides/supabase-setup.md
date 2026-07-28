@@ -1,6 +1,6 @@
 # Supabase setup
 
-We use Supabase for **Postgres** (users, chats, source documents, chunks, embeddings, and citations) and **Auth** (email sign-in only). You need one hosted Supabase project before wiring up `backend/` and `frontend/`.
+We use Supabase for **Postgres** (users, chats, source documents, chunks, embeddings, and citations) and **Auth** (email/password by default; SSO per deployment — see [SSO setup](sso-setup.md)). You need one hosted Supabase project before wiring up `backend/` and `frontend/`.
 
 ## 1. Create an account
 
@@ -38,13 +38,12 @@ supabase projects api-keys --project-ref <your-project-ref>
 
 Keep `service_role` out of git, client bundles, and frontend env files.
 
-## 4. Auth settings (email only)
-
-This app uses email auth only — no Google/SSO.
+## 4. Auth settings
 
 1. Dashboard → **Authentication** → **Providers**.
-2. Leave **Email** enabled.
+2. Leave **Email** enabled — every deployment supports email/password sign-in.
 3. For local dev, you may want **Authentication** → **Email** → disable "Confirm email" so sign-up works without inbox access (re-enable for production).
+4. If this deployment needs SSO (Entra ID, Google Workspace) instead of or alongside email/password, follow [SSO setup](sso-setup.md) to register the provider and enable it here.
 
 ## 5. Database schema management
 
@@ -76,3 +75,4 @@ See [Backend setup](backend-setup.md) for the Alembic workflow.
 
 - [Backend setup](backend-setup.md) — Python service + Supabase client
 - [Frontend setup](frontend-setup.md) — React app + `@supabase/supabase-js`
+- [SSO setup](sso-setup.md) — Entra ID / Google Workspace sign-in for a specific deployment

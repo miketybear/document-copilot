@@ -89,6 +89,16 @@ Quy tắc chung: mỗi phase là một **lát cắt dọc** (vertical slice) ch�
 - [x] Loạt cải tiến UI/UX theo yêu cầu sau khi Phase 8 xong: redesign theme (teal/slate palette, Geist Mono cho metadata), app shell với sidebar (danh sách thread theo Pinned/Today/Earlier, pin/delete có confirm dialog, dark mode toggle theo OS + lưu localStorage, scrollbar CSS thuần), auto-derive thread title từ câu hỏi đầu (`derive_title`), ẩn thread chưa có title khỏi sidebar tới khi lượt đầu xong, landing page mới cho "New chat" (greeting + input giữa màn hình, chỉ tạo thread khi gửi tin nhắn đầu — giống ChatGPT/Claude), render markdown thật cho câu trả lời (`react-markdown`, bullet/numbered list đúng thay vì dồn 1 đoạn)
 - [x] Bug phát hiện thêm, đã tách task riêng: model đôi khi in literal `[citation]` trong câu trả lời — vi phạm chính `instructions.md` (citation chỉ nên ở structured field)
 
+## Bổ sung — SSO (Entra ID / Google Workspace)
+
+Yêu cầu thật: công ty tự dùng Entra ID, 1 khách hàng dùng Google Workspace. Backend giữ nguyên `cloud Supabase` (chưa switch on-prem).
+
+- [x] Xác nhận `app/auth/dependencies.py` không cần đổi gì — Supabase Auth phát JWT cùng 1 dạng dù đăng nhập bằng email/password hay SSO, nên vẫn verify được qua đúng 1 đường
+- [x] Không thêm abstraction `AuthVerifier` — mọi provider hiện có (email, Entra ID, Google) đều đi qua cùng 1 code path; chỉ tách interface khi có khách hàng cần nguồn định danh Supabase Auth không broker được (vd gateway tự SSO rồi forward header) — lúc đó mới là lời gọi thứ 2 thật, không phải giả định
+- [x] Frontend: `env.ts` thêm `VITE_SSO_PROVIDERS` (danh sách provider cho phép, fail-fast nếu giá trị lạ), `SignIn.tsx` hiện nút "Continue with Microsoft"/"Continue with Google" phía trên form email/password khi được cấu hình — dùng thẳng `supabase.auth.signInWithOAuth()`, không cần route callback riêng (`detectSessionInUrl` mặc định của `@supabase/supabase-js` tự xử lý)
+- [x] Test: không cấu hình → giữ nguyên UI cũ (email/password only); cấu hình `azure,google` → hiện đúng 2 nút; giá trị provider sai → app fail-fast thay vì âm thầm bỏ qua
+- [x] Cập nhật tài liệu: `frontend/CLAUDE.md`, `docs/architecture.md` (thêm mục "SSO (Entra ID, Google Workspace)"), `docs/guides/supabase-setup.md`, `docs/guides/sso-setup.md` (mới — hướng dẫn đăng ký app trên Entra ID/Google Cloud Console + bật provider trên Supabase Dashboard, các bước này ngoài phạm vi code, phải làm tay)
+
 ## Phase 9 — Deploy on-prem
 
 - [ ] Dockerfile backend, Dockerfile frontend (build tĩnh)

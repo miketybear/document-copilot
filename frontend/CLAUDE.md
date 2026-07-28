@@ -8,7 +8,7 @@ This is the React SPA for Document Copilot. Read [../CLAUDE.md](../CLAUDE.md) fi
 - **Tailwind CSS** for styling. No CSS modules, styled-components, Emotion, or `.module.css` files for component styles. Global theme tokens live in `src/index.css`.
 - **shadcn/ui** for UI primitives. Add components with `pnpm dlx shadcn@latest add <name>` — don't hand-roll what shadcn already ships.
 - **React Router** for routing.
-- **`@supabase/supabase-js`** for auth (email only — no Google sign-in, no SSO providers).
+- **`@supabase/supabase-js`** for auth. Email/password by default; SSO (Entra ID, Google Workspace) is available per-deployment via Supabase Auth's OAuth providers — see `docs/guides/sso-setup.md`. Which SSO buttons show is controlled by `VITE_SSO_PROVIDERS`, not a code branch.
 
 ## Package manager
 
@@ -73,7 +73,7 @@ Keep imports consistent with the `@/*` alias (e.g. `@/lib/api`, `@/components/ui
 
 - Talks to a separate Python backend over JSON. URL comes from `VITE_API_BASE_URL`.
 - Always use `api.get/post/put/patch/delete` from `@/lib/api` — it handles base URL, JSON, Supabase bearer token, timeouts, and typed `ApiError`s (including the `isNetworkError` flag that distinguishes CORS/network from HTTP errors).
-- Auth is Supabase email. The bearer token is injected automatically via the `api` client; never thread tokens through component props.
+- Auth is Supabase (email/password, plus optional SSO providers). The bearer token is injected automatically via the `api` client; never thread tokens through component props.
 
 ## Testing
 

@@ -4,15 +4,30 @@ import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { env, type SsoProvider } from '@/lib/env'
 import { supabase } from '@/lib/supabase'
 
 type Mode = 'sign-in' | 'sign-up'
+
+const SSO_LABELS: Record<SsoProvider, string> = {
+  azure: 'Continue with Microsoft',
+  google: 'Continue with Google',
+}
 
 export function SignIn() {
   const [mode, setMode] = useState<Mode>('sign-in')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
+
+  async function handleSsoSignIn(provider: SsoProvider) {
+    setError(null)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin },
+    })
+    if (error) setError(error.message)
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -40,42 +55,65 @@ export function SignIn() {
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-4">
-      <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
+      <div className="flex w-full max-w-sm flex-col gap-4">
         <h1 className="text-xl font-semibold text-foreground">
           {mode === 'sign-in' ? 'Sign in' : 'Sign up'}
         </h1>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required autoComplete="email" />
-        </div>
+        {env.ssoProviders.length > 0 && (
+          <div className="flex flex-col gap-2">
+            {env.ssoProviders.map((provider) => (
+              <Button
+                key={provider}
+                type="button"
+                variant="outline"
+                onClick={() => handleSsoSignIn(provider)}
+              >
+                {SSO_LABELS[provider]}
+              </Button>
+            ))}
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={6}
-            autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-          />
-        </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="h-px flex-1 bg-border" />
+              or
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          </div>
+        )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" required autoComplete="email" />
+          </div>
 
-        <Button type="submit" disabled={submitting}>
-          {mode === 'sign-in' ? 'Sign in' : 'Sign up'}
-        </Button>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+            />
+          </div>
 
-        <button
-          type="button"
-          className="text-sm text-muted-foreground underline"
-          onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
-        >
-          {mode === 'sign-in' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-        </button>
-      </form>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <Button type="submit" disabled={submitting}>
+            {mode === 'sign-in' ? 'Sign in' : 'Sign up'}
+          </Button>
+
+          <button
+            type="button"
+            className="text-sm text-muted-foreground underline"
+            onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
+          >
+            {mode === 'sign-in' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+          </button>
+        </form>
+      </div>
     </main>
   )
 }
