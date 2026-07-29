@@ -106,7 +106,14 @@ docker compose up -d
 If only `backend/.env` or the root `.env` changed (no code changes), `docker compose up -d` alone picks up the new values — no rebuild needed for backend env changes, but frontend env changes (`VITE_*`) require a rebuild since they're baked into the static bundle:
 
 ```bash
-docker compose up -d --build frontend
+docker compose build --no-cache frontend
+docker compose up -d frontend
+```
+
+**Use `--no-cache` specifically when only `VITE_*` values changed and the source code didn't** — observed firsthand standing this up: BuildKit can reuse a cached `RUN pnpm build` layer from an earlier build even though the build-arg values differ, silently shipping the *old* `VITE_API_BASE_URL`/etc. baked into the bundle. Verify by grepping the served bundle for the expected value if in doubt:
+
+```bash
+docker compose exec frontend grep -o 'VITE_API_BASE_URL:`[^`]*`' /usr/share/nginx/html/assets/*.js
 ```
 
 ## 8. Logs and troubleshooting
