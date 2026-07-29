@@ -61,9 +61,11 @@ export function ChatConversation({
         <h1 className="text-sm font-semibold">{title ?? 'New chat'}</h1>
       </div>
 
-      <div className="mx-auto flex w-full min-h-0 max-w-2xl flex-1 flex-col gap-4 overflow-y-auto p-6">
-        <ChatMessageList messages={messages} status={status} />
-        {error && <p className="text-sm text-destructive">{describeChatError(error)}</p>}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-6">
+          <ChatMessageList messages={messages} status={status} />
+          {error && <p className="text-sm text-destructive">{describeChatError(error)}</p>}
+        </div>
       </div>
 
       <div className="mx-auto w-full max-w-2xl p-4 pt-0">
