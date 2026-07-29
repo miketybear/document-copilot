@@ -103,7 +103,12 @@ Yêu cầu thật: công ty tự dùng Entra ID, 1 khách hàng dùng Google Wor
 
 ## Phase 9 — Deploy on-prem
 
-- [ ] Dockerfile backend, Dockerfile frontend (build tĩnh)
-- [ ] `docker-compose.yml` + reverse proxy (Nginx/Caddy) route `/` → frontend, `/api` → backend
-- [ ] Env thật cho Supabase + Azure OpenAI trên host on-prem, xác nhận outbound HTTPS tới 2 endpoint đó hoạt động
-- [ ] Compose file + reverse-proxy config commit vào repo (secrets loại trừ)
+- [x] Dockerfile backend, Dockerfile frontend (build tĩnh) — `backend/Dockerfile` (multi-stage `uv sync`), `frontend/Dockerfile` (multi-stage `pnpm build` → nginx tĩnh). Cả hai đã build + smoke-test thật (`docker build` + `docker run` + curl `/health` và SPA fallback, không chỉ đọc code)
+- [x] Fix thật phát hiện khi build: `docling` kéo `torch`/`torchvision` từ PyPI mặc định kèm 15 package `nvidia-*` (CUDA, nhiều GB) dù host on-prem không có GPU — thêm `[tool.uv.sources]`/`[[tool.uv.index]]` trỏ về `download.pytorch.org/whl/cpu` cho riêng `sys_platform == 'linux'`, relock (`uv lock`), image backend còn 624MB thay vì nhiều GB
+- [x] Fix thật phát hiện khi build frontend: `pnpm build` (chế độ `tsc -b`, khác `tsc --noEmit` mà Phase 8 đã chạy) lỗi thật ở `env.ts` (implicit any) và `ChatConversation.tsx` (type `headers` không khớp `Resolvable`) — 2 lỗi này không liên quan Docker, đã tồn tại sẵn trong repo trước Phase 9, sửa xong build sạch
+- [x] `docker-compose.yml` + reverse proxy Caddy (`reverse-proxy/Caddyfile`) route `/` → frontend, `/api/*` → backend (strip prefix); `docker compose config` đã validate interpolation + build args
+- [x] Env: `backend/.env` (runtime, đọc lúc container start), root `.env` (build-arg `VITE_*` cho frontend + `DOMAIN` cho Caddy) — tách riêng vì Compose chỉ interpolate `.env` ở root, không đọc `frontend/.env`; documented trong `docs/guides/deploy-onprem.md`
+- [x] Compose file + reverse-proxy config + Dockerfile + `.dockerignore` + `.env.example` (root) commit vào repo (secrets loại trừ qua `.gitignore` sẵn có)
+- [x] Runbook triển khai chi tiết: `docs/guides/deploy-onprem.md` (build, TLS/domain qua Caddy, verify, redeploy, troubleshooting, portability note)
+- [x] Runbook ingest pipeline: `docs/guides/ingest-runbook.md` (CLI local + qua Docker, supersede semantics, model download caching, troubleshooting)
+- [ ] Xác nhận outbound HTTPS thật từ host on-prem thật (không phải máy dev) tới Supabase + Azure OpenAI + huggingface.co — chưa test được vì chưa có host on-prem thật để SSH vào

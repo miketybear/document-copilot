@@ -1,0 +1,47 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    volumes:
+      # Persists docling/rapidocr/huggingface_hub model downloads across restarts —
+      # without this, every `docker compose up` after a rebuild re-fetches them.
+      - backend_cache:/app/.cache
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Vite bakes these into the static bundle at build time, so they come from the
+        # root .env (compose build-arg interpolation only reads shell env / root .env,
+        # not frontend/.env) — keep them in sync with frontend/.env's values.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_SSO_PROVIDERS: ${VITE_SSO_PROVIDERS}
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  reverse-proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  backend_cache:
+  caddy_data:
+  caddy_config:

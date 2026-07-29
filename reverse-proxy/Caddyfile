@@ -1,0 +1,18 @@
+# DOMAIN comes from the root .env (see .env.example). Caddy's behavior adapts automatically:
+#   - a real public/internal DNS name  -> Let's Encrypt cert (needs port 80/443 reachable from
+#     the internet) or Caddy's internal CA for non-public names (e.g. *.internal, localhost)
+#   - ":80"                            -> plain HTTP, e.g. when a company-managed edge/load
+#     balancer already terminates TLS in front of this host
+{$DOMAIN:localhost}
+
+encode gzip
+
+# Frontend calls VITE_API_BASE_URL = https://<domain>/api, so strip the /api prefix
+# before forwarding — FastAPI's routes are mounted at the root (see backend/app/main.py).
+handle_path /api/* {
+    reverse_proxy backend:8000
+}
+
+handle {
+    reverse_proxy frontend:80
+}

@@ -16,12 +16,27 @@ dependencies = [
     "structlog==26.1.0",
     "supabase==2.31.0",
     "tiktoken==0.13.0",
+    "torch==2.13.0",
+    "torchvision==0.28.0",
     "uvicorn[standard]==0.51.0",
 ]
 
 [tool.uv]
 add-bounds = "exact"
 exclude-newer = "7 days"
+
+# docling depends on torch/torchvision transitively for its layout model. The default PyPI
+# Linux wheels pull ~15 nvidia-* CUDA packages (multi-GB) even though the on-prem Docker host
+# has no GPU (see docs/architecture.md Deployment Shape). Force CPU wheels on Linux only, so
+# local dev on macOS/Windows is untouched.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

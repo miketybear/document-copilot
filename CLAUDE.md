@@ -21,10 +21,13 @@ Stack is locked unless explicitly changed. Don't propose alternatives without a 
 document-copilot/
 ├── CLAUDE.md           # this file
 ├── README.md
+├── docker-compose.yml  # on-prem deploy: backend + frontend + reverse-proxy (see docs/guides/deploy-onprem.md)
+├── .env.example        # root-level: read by docker compose only (build args, reverse-proxy domain)
+├── reverse-proxy/       # Caddyfile — TLS termination, routes / -> frontend, /api -> backend
 ├── data/               # local corpus + download script (payloads gitignored)
 ├── docs/               # specs, briefs, design notes
-├── backend/            # FastAPI service (see backend/CLAUDE.md)
-└── frontend/           # React SPA (see frontend/CLAUDE.md)
+├── backend/            # FastAPI service + Dockerfile (see backend/CLAUDE.md)
+└── frontend/           # React SPA + Dockerfile (see frontend/CLAUDE.md)
 ```
 
 ## Dependency policy
