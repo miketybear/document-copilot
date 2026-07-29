@@ -1,10 +1,15 @@
+import re
+
 import pytest
 
 from app.assistant.deps import DocumentAgentDeps
 from app.database.supabase import get_service_role_client
 from app.chat.orchestrator import _run_agent_grounded
+from app.grounding.validator import strip_inline_citation_markers
 
 pytestmark = pytest.mark.integration
+
+_BRACKET_MARKER = re.compile(r"\[[^\]]*\]")
 
 # These go through _run_agent_grounded rather than a bare agent.run: the model
 # occasionally mistranscribes a chunk_id (cites chunk_index instead, or splices two
@@ -52,3 +57,18 @@ async def test_question_with_no_relevant_documents_returns_no_fabricated_citatio
 
     retrieved_ids = {p.chunk_id for p in retrieved_passages}
     assert all(c.chunk_id in retrieved_ids for c in result.output.citations)
+
+
+async def test_sick_leave_question_produces_answer_with_no_inline_citation_markers():
+    # The model sometimes emits a literal "[citation]" marker in the raw answer despite the
+    # instructions (observed directly against this corpus), so this asserts on the sanitized
+    # text the orchestrator actually ships to users, not on the raw model output.
+    client = await get_service_role_client()
+    deps = DocumentAgentDeps(user_id="test-user", thread_id="test-thread", supabase_client=client)
+
+    result, _retrieved_passages = await _run_agent_grounded("What is the sick leave policy?", deps)
+
+    sanitized = strip_inline_citation_markers(result.output.answer)
+
+    assert not _BRACKET_MARKER.search(sanitized), f"marker survived sanitization: {sanitized!r}"
+    assert sanitized, "sanitization should not erase a real answer"

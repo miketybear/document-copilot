@@ -20,7 +20,7 @@ from app.chat.messages import (
 from app.chat.streaming import stream_error, stream_text_reply
 from app.database import chats
 from app.database.supabase import get_user_scoped_client
-from app.grounding.validator import GroundingError, validate_grounding
+from app.grounding.validator import GroundingError, strip_inline_citation_markers, validate_grounding
 from app.retrieval.types import SourcePassage
 
 logger = structlog.get_logger(__name__)
@@ -60,6 +60,8 @@ async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> Async
         async for chunk in stream_error("The assistant is unavailable right now. Please try again."):
             yield chunk
         return
+
+    result.output.answer = strip_inline_citation_markers(result.output.answer)
 
     assistant_message_id = str(uuid.uuid4())
     cited_passages = _resolve_cited_passages(result.output, retrieved_passages)
