@@ -27,7 +27,7 @@ export function ChatConversation({
     messages: initialMessages,
     transport: new DefaultChatTransport({
       api: `${env.apiBaseUrl}/chat/stream`,
-      headers: async () => {
+      headers: async (): Promise<Record<string, string>> => {
         const token = await getAccessToken()
         return token ? { Authorization: `Bearer ${token}` } : {}
       },

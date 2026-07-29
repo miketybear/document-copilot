@@ -14,7 +14,7 @@ function parseSsoProviders(key: string): SsoProvider[] {
   const raw = import.meta.env[key]
   if (!raw) return []
 
-  return raw.split(',').map((entry) => {
+  return raw.split(',').map((entry: string) => {
     const provider = entry.trim()
     if (!KNOWN_SSO_PROVIDERS.includes(provider as SsoProvider)) {
       throw new Error(
