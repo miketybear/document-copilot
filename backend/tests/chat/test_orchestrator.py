@@ -47,9 +47,13 @@ class FakeAgentResult:
         return [FakeMessage()]
 
 
-async def _run_and_collect(monkeypatch, agent_result: FakeAgentResult) -> tuple[list[str], AsyncMock, AsyncMock]:
+async def _run_and_collect(
+    monkeypatch, agent_result: FakeAgentResult | AsyncMock
+) -> tuple[list[str], AsyncMock, AsyncMock]:
     monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
-    monkeypatch.setattr(orchestrator.agent, "run", AsyncMock(return_value=agent_result))
+    if not isinstance(agent_result, AsyncMock):
+        agent_result = AsyncMock(return_value=agent_result)
+    monkeypatch.setattr(orchestrator.agent, "run", agent_result)
 
     append_message = AsyncMock(side_effect=[{"id": "user-msg"}, {"id": "assistant-msg"}])
     append_citations = AsyncMock()
@@ -89,6 +93,42 @@ async def test_fabricated_citation_streams_error_and_does_not_persist_assistant_
     assert '"type": "error"' in stream or '"type":"error"' in stream
     assert "text-delta" not in stream  # the unvalidated answer text must never reach the client
     append_message.assert_called_once()  # only the user message was persisted, not the assistant reply
+    append_citations.assert_not_awaited()
+
+
+async def test_fabricated_citation_is_retried_and_recovers(monkeypatch):
+    bad_result = FakeAgentResult(
+        GroundedAnswer(answer="You do X by following step 1.", citations=[Citation(chunk_id="chunk-fabricated")]),
+        retrieved_passages=[_passage("chunk-a")],
+    )
+    good_result = FakeAgentResult(
+        GroundedAnswer(answer="You do X by following step 1.", citations=[Citation(chunk_id="chunk-a")]),
+        retrieved_passages=[_passage("chunk-a")],
+    )
+    agent_run = AsyncMock(side_effect=[bad_result, good_result])
+
+    chunks, append_message, append_citations = await _run_and_collect(monkeypatch, agent_run)
+
+    stream = "".join(chunks)
+    assert '"type": "text-delta"' in stream or '"type":"text-delta"' in stream
+    assert agent_run.call_count == 2
+    assert "message_history" in agent_run.call_args.kwargs  # retry continues the same conversation
+    append_citations.assert_awaited_once_with(USER, "assistant-msg", ["chunk-a"])
+
+
+async def test_fabricated_citation_still_bad_after_retry_streams_error(monkeypatch):
+    bad_result = FakeAgentResult(
+        GroundedAnswer(answer="You do X by following step 1.", citations=[Citation(chunk_id="chunk-fabricated")]),
+        retrieved_passages=[_passage("chunk-a")],
+    )
+    agent_run = AsyncMock(side_effect=[bad_result, bad_result])
+
+    chunks, append_message, append_citations = await _run_and_collect(monkeypatch, agent_run)
+
+    stream = "".join(chunks)
+    assert '"type": "error"' in stream or '"type":"error"' in stream
+    assert agent_run.call_count == 2  # bounded: one retry, not an infinite loop
+    append_message.assert_called_once()
     append_citations.assert_not_awaited()
 
 

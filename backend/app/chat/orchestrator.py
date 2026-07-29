@@ -2,6 +2,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 import structlog
+from pydantic_ai import AgentRunResult
 from pydantic_ai.messages import ModelMessage, ToolReturnPart
 
 from app.assistant.agent import agent
@@ -24,6 +25,16 @@ from app.retrieval.types import SourcePassage
 
 logger = structlog.get_logger(__name__)
 
+# LLMs occasionally mistranscribe a chunk_id (blend two similar-looking UUIDs, cite
+# chunk_index instead, drop a character) rather than fully hallucinate one. One corrective
+# retry with the validation error fed back resolves most of these without failing the turn.
+_GROUNDING_RETRY_PROMPT = (
+    "Your previous answer's citations failed validation: {error} Re-emit a corrected answer. "
+    "Copy each chunk_id character-for-character from the search_documents/read_chunk/"
+    "read_surrounding_chunks results already in this conversation — never chunk_index, a "
+    "section number, or a value from memory."
+)
+
 
 async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> AsyncIterator[str]:
     user_message = request.messages[-1]
@@ -36,22 +47,17 @@ async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> Async
     deps = DocumentAgentDeps(user_id=user.id, thread_id=request.id, supabase_client=client)
 
     try:
-        result = await agent.run(extract_text(user_message), deps=deps)
-    except Exception:
-        logger.error("chat.agent_run_failed", thread_id=request.id, exc_info=True)
-        async for chunk in stream_error("The assistant is unavailable right now. Please try again."):
-            yield chunk
-        return
-
-    retrieved_passages = _extract_retrieved_passages(result.all_messages())
-
-    try:
-        validate_grounding(result.output, retrieved_passages)
+        result, retrieved_passages = await _run_agent_grounded(extract_text(user_message), deps)
     except GroundingError as exc:
         logger.error("chat.grounding_failed", thread_id=request.id, detail=str(exc))
         async for chunk in stream_error(
             "The assistant couldn't produce a fully grounded answer. Please rephrase your question and try again."
         ):
+            yield chunk
+        return
+    except Exception:
+        logger.error("chat.agent_run_failed", thread_id=request.id, exc_info=True)
+        async for chunk in stream_error("The assistant is unavailable right now. Please try again."):
             yield chunk
         return
 
@@ -77,6 +83,27 @@ def _resolve_cited_passages(
     """Maps each citation's chunk_id back to the full passage retrieved this turn, in citation order."""
     passages_by_chunk_id = {passage.chunk_id: passage for passage in retrieved_passages}
     return [passages_by_chunk_id[c.chunk_id] for c in answer.citations if c.chunk_id in passages_by_chunk_id]
+
+
+async def _run_agent_grounded(
+    user_prompt: str, deps: DocumentAgentDeps
+) -> tuple[AgentRunResult, list[SourcePassage]]:
+    """Run the agent and validate its citations, retrying once with corrective feedback
+    if a citation doesn't match a retrieved chunk_id. Raises GroundingError if the retry
+    is also ungrounded."""
+    result = await agent.run(user_prompt, deps=deps)
+    retrieved_passages = _extract_retrieved_passages(result.all_messages())
+
+    try:
+        validate_grounding(result.output, retrieved_passages)
+    except GroundingError as exc:
+        result = await agent.run(
+            _GROUNDING_RETRY_PROMPT.format(error=exc), message_history=result.all_messages(), deps=deps
+        )
+        retrieved_passages = _extract_retrieved_passages(result.all_messages())
+        validate_grounding(result.output, retrieved_passages)
+
+    return result, retrieved_passages
 
 
 def _extract_retrieved_passages(messages: list[ModelMessage]) -> list[SourcePassage]:
