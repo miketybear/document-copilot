@@ -59,7 +59,18 @@ docker compose up -d
 
 First build pulls the Python/Node base images and resolves ~200 backend packages (docling's CPU-only torch build, not the CUDA one — see the comment in `backend/pyproject.toml` if you're curious why that matters) — expect several minutes on a cold cache. Subsequent builds are much faster.
 
-## 4. TLS behavior (Caddy)
+## 4. Point Supabase at this domain
+
+Easy to miss because nothing fails until someone actually signs in: Supabase Auth redirects the browser back to a URL it controls independently of anything in this repo's env files. **Supabase Dashboard → Authentication → URL Configuration**:
+
+- **Site URL** — set to `https://<DOMAIN>` (or `http://<DOMAIN>` if you set `DOMAIN=:80`). This is Supabase's fallback redirect target, and it ships defaulted to `http://localhost:3000` on a new project — if you never touch it, that's where users land.
+- **Redirect URLs** — add `https://<DOMAIN>/**` (matching your actual scheme) to the allow-list. The frontend explicitly requests `redirectTo: window.location.origin` on every sign-in (`src/pages/auth/SignIn.tsx`), but Supabase silently ignores that request and falls back to the Site URL above if the requested URL isn't allow-listed here — so both settings need to match this deployment, not just one of them.
+
+Symptom if you skip this: SSO (or email/password) sign-in completes against Supabase/the identity provider successfully, then the browser gets redirected to whatever stale URL is in Site URL (often `http://localhost:3000`) and fails with `ERR_CONNECTION_REFUSED` — nothing wrong with the containers, just a dashboard setting that didn't move when the app did.
+
+Update this every time `DOMAIN` changes (moving from local testing to a real on-prem hostname, for instance) — it's Supabase project config, not something `docker compose` can set for you.
+
+## 5. TLS behavior (Caddy)
 
 `reverse-proxy/Caddyfile` uses `{$DOMAIN}` as its site address, so:
 
@@ -67,7 +78,7 @@ First build pulls the Python/Node base images and resolves ~200 backend packages
 - **Internal-only name or `localhost`** → Caddy issues a cert from its own internal CA. Browsers will warn until that CA is trusted on client machines; fine for testing, usually not what you want for a company-wide rollout.
 - **`:80`** → plain HTTP, no TLS. Use this when a company-managed reverse proxy/load balancer in front of this host already terminates TLS (common in on-prem setups where this Docker host sits behind an existing edge).
 
-## 5. Verify
+## 6. Verify
 
 ```bash
 docker compose ps
@@ -80,9 +91,9 @@ The backend's `/health` route isn't proxied by Caddy (only `/api/*` is — see [
 docker compose exec backend curl -sf http://localhost:8000/health
 ```
 
-Then open `https://<DOMAIN>/` (or `http://<DOMAIN>/` if you set `DOMAIN=:80`) in a browser: sign-in page should load, and after signing in, chat should stream answers with citations.
+Then open `https://<DOMAIN>/` (or `http://<DOMAIN>/` if you set `DOMAIN=:80`) in a browser: sign-in page should load, and after signing in (including SSO, if step 4 is done), chat should stream answers with citations.
 
-## 6. Redeploy after a code change
+## 7. Redeploy after a code change
 
 Containers are stateless — all durable data lives in Supabase — so redeploying is just rebuild + restart:
 
@@ -98,7 +109,7 @@ If only `backend/.env` or the root `.env` changed (no code changes), `docker com
 docker compose up -d --build frontend
 ```
 
-## 7. Logs and troubleshooting
+## 8. Logs and troubleshooting
 
 ```bash
 docker compose logs -f              # all services
@@ -110,6 +121,7 @@ Common issues:
 - **Caddy stuck retrying a cert** — usually `DOMAIN` isn't publicly resolvable to this host, or port 80/443 isn't reachable from the internet (needed for the Let's Encrypt HTTP-01 challenge). Switch to `:80` and let an upstream proxy handle TLS, or fix DNS/firewall.
 - **Frontend loads but API calls fail with a network error** — check `VITE_API_BASE_URL` matches `DOMAIN` exactly (including `https://` vs `http://`), and that you rebuilt the frontend image after changing it.
 - **Backend container exits immediately** — almost always a missing/invalid var in `backend/.env`; `app/config.py` fails fast on startup, so `docker compose logs backend` will name the missing field directly.
+- **Sign-in succeeds against the identity provider, then `ERR_CONNECTION_REFUSED` on redirect** — Supabase's Site URL/Redirect URLs weren't updated for this `DOMAIN`; see step 4.
 
 ## Can this run anywhere Docker runs, not just on-prem?
 

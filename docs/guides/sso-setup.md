@@ -66,6 +66,8 @@ The sign-in page reads this once at build/boot time and renders the matching "Co
 2. Click through and confirm the identity provider's consent/login screen appears, redirects back, and lands signed in.
 3. Confirm `public.users` gets a row for the new identity (same upsert-on-first-request behavior as email/password — see `app/auth/dependencies.py`).
 
+**If step 2 completes at the identity provider but then the browser gets `ERR_CONNECTION_REFUSED`** on redirect: Supabase's own **Site URL** / **Redirect URLs** (Dashboard → Authentication → URL Configuration) haven't been updated to match wherever this deployment is actually served — a separate setting from the callback URL in section 1, and easy to forget when moving from local dev to a real deployment. See [deploy-onprem.md](deploy-onprem.md#4-point-supabase-at-this-domain).
+
 ## Next steps
 
 - [Supabase setup](supabase-setup.md) — the underlying Supabase project this SSO config attaches to
