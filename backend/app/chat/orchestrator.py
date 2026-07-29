@@ -10,7 +10,7 @@ from app.chat.messages import ChatStreamRequest, build_assistant_message, extrac
 from app.chat.streaming import stream_error, stream_text_reply
 from app.database import chats
 from app.database.supabase import get_user_scoped_client
-from app.grounding.validator import GroundingError, validate_grounding
+from app.grounding.validator import GroundingError, strip_inline_citation_markers, validate_grounding
 from app.retrieval.types import SourcePassage
 
 
@@ -36,6 +36,8 @@ async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> Async
         async for chunk in stream_error(str(exc)):
             yield chunk
         return
+
+    result.output.answer = strip_inline_citation_markers(result.output.answer)
 
     assistant_message_id = str(uuid.uuid4())
 

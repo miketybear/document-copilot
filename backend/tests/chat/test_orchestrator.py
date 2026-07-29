@@ -86,6 +86,21 @@ async def test_fabricated_citation_streams_error_and_does_not_persist_assistant_
     append_citations.assert_not_awaited()
 
 
+async def test_inline_citation_marker_is_stripped_before_streaming_and_persisting(monkeypatch):
+    answer = GroundedAnswer(
+        answer="You do X by following step 1. [citation]", citations=[Citation(chunk_id="chunk-a")]
+    )
+    result = FakeAgentResult(answer, retrieved_passages=[_passage("chunk-a")])
+
+    chunks, append_message, append_citations = await _run_and_collect(monkeypatch, result)
+
+    stream = "".join(chunks)
+    assert "[citation]" not in stream
+
+    persisted_assistant_content = append_message.call_args_list[1].args[3]
+    assert "[citation]" not in str(persisted_assistant_content)
+
+
 async def test_no_citations_with_empty_retrieval_streams_answer(monkeypatch):
     answer = GroundedAnswer(answer="The corpus does not contain enough evidence to answer that.", citations=[])
     result = FakeAgentResult(answer, retrieved_passages=[])
