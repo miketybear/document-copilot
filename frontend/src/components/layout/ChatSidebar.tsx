@@ -31,6 +31,7 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
 import { api, type ChatThread } from '@/lib/api'
@@ -217,6 +218,8 @@ export function ChatSidebar({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SidebarRail />
     </Sidebar>
   )
 }

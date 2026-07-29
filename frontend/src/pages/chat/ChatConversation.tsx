@@ -22,6 +22,8 @@ export function ChatConversation({
   autoSendText?: string
   onTurnComplete?: () => void
 }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   const { messages, sendMessage, status, error } = useChat({
     id: threadId,
     messages: initialMessages,
@@ -57,18 +59,18 @@ export function ChatConversation({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-3.5 md:px-7">
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger />
         <h1 className="text-sm font-semibold">{title ?? 'New chat'}</h1>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-6">
-          <ChatMessageList messages={messages} status={status} />
+      <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-6">
+          <ChatMessageList messages={messages} status={status} scrollContainerRef={scrollContainerRef} />
           {error && <p className="text-sm text-destructive">{describeChatError(error)}</p>}
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl p-4 pt-0">
+      <div className="mx-auto w-full max-w-3xl p-4 pt-0">
         <ChatInput
           disabled={status === 'streaming' || status === 'submitted'}
           onSend={(text) => sendMessage({ text })}

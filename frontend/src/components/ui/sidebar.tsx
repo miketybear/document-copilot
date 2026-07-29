@@ -27,10 +27,22 @@ import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+
+const SIDEBAR_WIDTH_STORAGE_KEY = "sidebar_width"
+const SIDEBAR_WIDTH_DEFAULT = 256
+const SIDEBAR_WIDTH_MIN = 200
+const SIDEBAR_WIDTH_MAX = 420
+
+function readStoredSidebarWidth(): number {
+  if (typeof window === "undefined") return SIDEBAR_WIDTH_DEFAULT
+  const stored = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY))
+  return stored >= SIDEBAR_WIDTH_MIN && stored <= SIDEBAR_WIDTH_MAX
+    ? stored
+    : SIDEBAR_WIDTH_DEFAULT
+}
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -40,6 +52,8 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  width: number
+  setWidth: (width: number) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -68,6 +82,13 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [width, setWidthState] = React.useState(readStoredSidebarWidth)
+
+  const setWidth = React.useCallback((value: number) => {
+    const clamped = Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value))
+    setWidthState(clamped)
+    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clamped))
+  }, [])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -122,8 +143,10 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      width,
+      setWidth,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, width, setWidth]
   )
 
   return (
@@ -132,7 +155,7 @@ function SidebarProvider({
         data-slot="sidebar-wrapper"
         style={
           {
-            "--sidebar-width": SIDEBAR_WIDTH,
+            "--sidebar-width": `${width}px`,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             ...style,
           } as React.CSSProperties
@@ -278,16 +301,46 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, state, width, setWidth } = useSidebar()
+  const dragRef = React.useRef<{ startX: number; startWidth: number; moved: boolean } | null>(null)
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0 || state !== "expanded") return
+    dragRef.current = { startX: event.clientX, startWidth: width, moved: false }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    document.body.style.userSelect = "none"
+  }
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    if (!drag) return
+    const delta = event.clientX - drag.startX
+    if (Math.abs(delta) > 3) drag.moved = true
+    setWidth(drag.startWidth + delta)
+  }
+
+  const endDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current
+    dragRef.current = null
+    document.body.style.userSelect = ""
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    if (!drag || !drag.moved) {
+      toggleSidebar()
+    }
+  }
 
   return (
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle Sidebar"
+      aria-label="Toggle or resize sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
-      title="Toggle Sidebar"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endDrag}
+      title="Drag to resize, click to toggle"
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
