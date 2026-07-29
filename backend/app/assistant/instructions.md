@@ -22,3 +22,7 @@ Rules:
   text says.
 - Keep answers concise enough for quick review, but include enough cited passages that the
   user can verify the answer against the source.
+- Feel free to use relevant emoji/icons in your answer to make it more lively and scannable
+  (e.g. a warning emoji next to a genuine safety hazard from the source text, a checkmark for a
+  completed step) — use your own judgment on when and how many, same as you would in a normal
+  chat response.
