@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import type { CitationData } from '@/lib/citations'
 
 const EXCERPT_PREVIEW_LENGTH = 220
@@ -38,15 +39,15 @@ function CitationCard({ citation, highlighted }: { citation: CitationData; highl
   )
 }
 
-export function CitationCluster({ citations, leading }: { citations: CitationData[]; leading?: ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const [highlighted, setHighlighted] = useState<string | null>(null)
-
-  function reveal(chunkId: string) {
-    setOpen(true)
-    setHighlighted(chunkId)
-  }
-
+export function CitationCluster({
+  citations,
+  leading,
+  onOpenSources,
+}: {
+  citations: CitationData[]
+  leading?: React.ReactNode
+  onOpenSources: (citations: CitationData[], highlightChunkId?: string) => void
+}) {
   return (
     <div className="mr-auto flex max-w-[80%] flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -57,7 +58,7 @@ export function CitationCluster({ citations, leading }: { citations: CitationDat
             type="button"
             aria-label={`Show source ${i + 1}: ${citation.documentTitle}`}
             className="flex size-[18px] items-center justify-center rounded-full bg-accent font-mono text-[11px] tabular-nums text-primary hover:bg-primary hover:text-primary-foreground"
-            onClick={() => reveal(citation.chunkId)}
+            onClick={() => onOpenSources(citations, citation.chunkId)}
           >
             {i + 1}
           </button>
@@ -66,9 +67,9 @@ export function CitationCluster({ citations, leading }: { citations: CitationDat
           <button
             type="button"
             className="text-xs text-muted-foreground underline hover:text-primary"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => onOpenSources(citations)}
           >
-            {open ? 'Hide sources' : `Show sources (${citations.length})`}
+            {`Show sources (${citations.length})`}
           </button>
         ) : (
           <p className="flex items-center gap-1.5 rounded-md bg-warning px-2.5 py-1 text-xs text-warning-foreground">
@@ -77,21 +78,44 @@ export function CitationCluster({ citations, leading }: { citations: CitationDat
           </p>
         )}
       </div>
+    </div>
+  )
+}
 
-      {open && citations.length > 0 && (
-        <div className="overflow-hidden rounded-md border border-border">
-          <div className="border-b border-border bg-muted px-3 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            Sources
-          </div>
+export function SourcesPanel({
+  open,
+  citations,
+  highlightedChunkId,
+  onOpenChange,
+}: {
+  open: boolean
+  citations: CitationData[]
+  highlightedChunkId: string | null
+  onOpenChange: (open: boolean) => void
+}) {
+  // Keep rendering the last-opened citations while the sheet is closing (rather than clearing
+  // them the instant `open` flips false) so the content doesn't disappear mid slide-out animation.
+  useEffect(() => {
+    if (!open || !highlightedChunkId) return
+    document.getElementById(`citation-${highlightedChunkId}`)?.scrollIntoView({ block: 'nearest' })
+  }, [open, highlightedChunkId])
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>{`Sources (${citations.length})`}</SheetTitle>
+        </SheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {citations.map((citation) => (
             <CitationCard
               key={citation.chunkId}
               citation={citation}
-              highlighted={citation.chunkId === highlighted}
+              highlighted={citation.chunkId === highlightedChunkId}
             />
           ))}
         </div>
-      )}
-    </div>
+      </SheetContent>
+    </Sheet>
   )
 }

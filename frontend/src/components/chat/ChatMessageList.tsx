@@ -2,10 +2,10 @@ import type { ChatStatus, UIMessage } from 'ai'
 import { ArrowDown, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 
-import { CitationCluster } from '@/components/chat/Citation'
+import { CitationCluster, SourcesPanel } from '@/components/chat/Citation'
 import { MarkdownAnswer } from '@/components/chat/MarkdownAnswer'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { getCitations } from '@/lib/citations'
+import { getCitations, type CitationData } from '@/lib/citations'
 import { cn } from '@/lib/utils'
 
 const STATUS_LABEL: Record<'submitted' | 'streaming', string> = {
@@ -86,6 +86,11 @@ export function ChatMessageList({
   const interruptedRef = useRef(false)
   const [trailingSpacerHeight, setTrailingSpacerHeight] = useState(0)
   const [showJumpToLatest, setShowJumpToLatest] = useState(false)
+  const [sourcesPanel, setSourcesPanel] = useState<{ citations: CitationData[]; highlightChunkId: string | null }>({
+    citations: [],
+    highlightChunkId: null,
+  })
+  const [isSourcesOpen, setIsSourcesOpen] = useState(false)
 
   // A wheel/touch event only ever fires from real user input, never from our own scrollIntoView
   // calls — so it's an unambiguous signal that the user has taken over scrolling. Once that
@@ -154,6 +159,11 @@ export function ChatMessageList({
     userMessageRefs.current.get(lastUserMessage.id)?.scrollIntoView({ behavior: 'auto', block: 'start' })
   }, [messages, isActive, scrollContainerRef])
 
+  function openSources(citations: CitationData[], highlightChunkId?: string) {
+    setSourcesPanel({ citations, highlightChunkId: highlightChunkId ?? null })
+    setIsSourcesOpen(true)
+  }
+
   function jumpToLatest() {
     interruptedRef.current = false
     setShowJumpToLatest(false)
@@ -204,6 +214,7 @@ export function ChatMessageList({
               <CitationCluster
                 citations={citations}
                 leading={<CopyButton text={text} label="Copy response" alwaysVisible />}
+                onOpenSources={openSources}
               />
             )}
           </div>
@@ -232,6 +243,13 @@ export function ChatMessageList({
           Jump to latest
         </button>
       )}
+
+      <SourcesPanel
+        open={isSourcesOpen}
+        citations={sourcesPanel.citations}
+        highlightedChunkId={sourcesPanel.highlightChunkId}
+        onOpenChange={setIsSourcesOpen}
+      />
     </div>
   )
 }
