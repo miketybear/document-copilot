@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 
 import { CitationCluster } from '@/components/chat/Citation'
 import { MarkdownAnswer } from '@/components/chat/MarkdownAnswer'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCitations } from '@/lib/citations'
 import { cn } from '@/lib/utils'
 
@@ -45,18 +46,25 @@ function CopyButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      aria-label={copied ? 'Copied' : label}
-      className={cn(
-        'rounded-md p-1.5 text-muted-foreground transition-opacity hover:bg-secondary hover:text-foreground',
-        !alwaysVisible && 'opacity-0 focus-visible:opacity-100 group-hover/message:opacity-100',
-        className,
-      )}
-    >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label={copied ? 'Copied' : label}
+            className={cn(
+              'rounded-md p-1.5 text-muted-foreground transition-opacity hover:bg-secondary hover:text-foreground',
+              !alwaysVisible && 'opacity-0 focus-visible:opacity-100 group-hover/message:opacity-100',
+              className,
+            )}
+          />
+        }
+      >
+        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      </TooltipTrigger>
+      <TooltipContent>{copied ? 'Copied' : label}</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -175,7 +183,7 @@ export function ChatMessageList({
               }}
               className="group/message ml-auto flex max-w-[78%] items-start gap-1"
             >
-              <CopyButton text={text} label="Copy question" className="mt-1.5 shrink-0" />
+              <CopyButton text={text} label="Copy message" className="mt-1.5 shrink-0" />
               <div className="rounded-2xl rounded-br-sm border border-border bg-secondary px-3.5 py-2 text-sm text-secondary-foreground">
                 <p className="whitespace-pre-wrap">{text}</p>
               </div>
@@ -195,7 +203,7 @@ export function ChatMessageList({
             {!isPending && text && (
               <CitationCluster
                 citations={citations}
-                leading={<CopyButton text={text} label="Copy answer" alwaysVisible />}
+                leading={<CopyButton text={text} label="Copy response" alwaysVisible />}
               />
             )}
           </div>
