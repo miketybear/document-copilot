@@ -60,6 +60,7 @@ async def _run_and_collect(
     monkeypatch.setattr(orchestrator.chats, "append_message", append_message)
     monkeypatch.setattr(orchestrator.chats, "append_citations", append_citations)
     monkeypatch.setattr(orchestrator.chats, "set_thread_title", AsyncMock())
+    monkeypatch.setattr(orchestrator, "generate_title", AsyncMock(return_value="Do X"))
 
     chunks = [chunk async for chunk in orchestrator.run_turn(USER, _request("How do I do X?"))]
     return chunks, append_message, append_citations
@@ -159,7 +160,28 @@ async def test_no_citations_with_empty_retrieval_streams_answer(monkeypatch):
     append_citations.assert_awaited_once_with(USER, "assistant-msg", [])
 
 
-async def test_first_turn_sets_thread_title(monkeypatch):
+async def test_first_turn_sets_thread_title_from_generated_title(monkeypatch):
+    answer = GroundedAnswer(answer="You do X.", citations=[Citation(chunk_id="chunk-a")])
+    result = FakeAgentResult(answer, retrieved_passages=[_passage("chunk-a")])
+    set_thread_title = AsyncMock()
+    generate_title = AsyncMock(return_value="Doing X")
+
+    monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator.agent, "run", AsyncMock(return_value=result))
+    monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
+    monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())
+    monkeypatch.setattr(orchestrator.chats, "set_thread_title", set_thread_title)
+    monkeypatch.setattr(orchestrator, "generate_title", generate_title)
+
+    request = _request("How do I do X?")
+    async for _ in orchestrator.run_turn(USER, request):
+        pass
+
+    generate_title.assert_awaited_once_with("How do I do X?")
+    set_thread_title.assert_awaited_once_with(USER, "thread-1", "Doing X")
+
+
+async def test_first_turn_falls_back_to_derived_title_when_generation_fails(monkeypatch):
     answer = GroundedAnswer(answer="You do X.", citations=[Citation(chunk_id="chunk-a")])
     result = FakeAgentResult(answer, retrieved_passages=[_passage("chunk-a")])
     set_thread_title = AsyncMock()
@@ -169,6 +191,7 @@ async def test_first_turn_sets_thread_title(monkeypatch):
     monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
     monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())
     monkeypatch.setattr(orchestrator.chats, "set_thread_title", set_thread_title)
+    monkeypatch.setattr(orchestrator, "generate_title", AsyncMock(side_effect=RuntimeError("model unavailable")))
 
     request = _request("How do I do X?")
     async for _ in orchestrator.run_turn(USER, request):

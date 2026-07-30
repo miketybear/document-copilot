@@ -29,11 +29,11 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { ThreadMenuButton } from '@/components/layout/ThreadMenuButton'
 import { api, type ChatThread } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -134,15 +134,11 @@ export function ChatSidebar({
               <SidebarMenu>
                 {group.threads.map((thread) => (
                   <SidebarMenuItem key={thread.id} className="group/thread">
-                    <SidebarMenuButton
+                    <ThreadMenuButton
+                      thread={thread}
                       isActive={thread.id === activeThreadId}
-                      render={<Link to={`/chat/${thread.id}`} onClick={closeOnMobile} />}
-                    >
-                      {thread.pinned_at && (
-                        <Pin className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-                      )}
-                      <span className="truncate">{thread.title ?? 'Untitled chat'}</span>
-                    </SidebarMenuButton>
+                      onNavigate={closeOnMobile}
+                    />
 
                     <DropdownMenu>
                       <DropdownMenuTrigger

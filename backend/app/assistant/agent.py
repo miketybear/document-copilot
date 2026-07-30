@@ -21,6 +21,20 @@ _model = OpenAIChatModel(settings.azure_openai_chat_deployment, provider=_provid
 
 agent = Agent(_model, deps_type=DocumentAgentDeps, output_type=GroundedAnswer, instructions=_INSTRUCTIONS)
 
+_title_agent = Agent(
+    _model,
+    output_type=str,
+    instructions=(
+        "Summarize the user's message as a short chat title: 3-6 words, plain text, no "
+        "surrounding quotes, no trailing punctuation, same language as the message."
+    ),
+)
+
+
+async def generate_title(text: str) -> str:
+    result = await _title_agent.run(text)
+    return result.output.strip()
+
 
 @agent.tool
 async def search_documents(ctx: RunContext[DocumentAgentDeps], query: str) -> list[SourcePassage]:
