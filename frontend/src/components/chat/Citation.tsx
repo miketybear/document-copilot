@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import type { CitationData } from '@/lib/citations'
 
@@ -38,11 +38,9 @@ function CitationCard({ citation, highlighted }: { citation: CitationData; highl
   )
 }
 
-export function CitationCluster({ citations }: { citations: CitationData[] }) {
+export function CitationCluster({ citations, leading }: { citations: CitationData[]; leading?: ReactNode }) {
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState<string | null>(null)
-
-  if (citations.length === 0) return null
 
   function reveal(chunkId: string) {
     setOpen(true)
@@ -52,6 +50,7 @@ export function CitationCluster({ citations }: { citations: CitationData[] }) {
   return (
     <div className="mr-auto flex max-w-[80%] flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-1.5">
+        {leading}
         {citations.map((citation, i) => (
           <button
             key={citation.chunkId}
@@ -63,16 +62,23 @@ export function CitationCluster({ citations }: { citations: CitationData[] }) {
             {i + 1}
           </button>
         ))}
-        <button
-          type="button"
-          className="text-xs text-muted-foreground underline hover:text-primary"
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? 'Hide sources' : `Show sources (${citations.length})`}
-        </button>
+        {citations.length > 0 ? (
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline hover:text-primary"
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? 'Hide sources' : `Show sources (${citations.length})`}
+          </button>
+        ) : (
+          <p className="flex items-center gap-1.5 rounded-md bg-warning px-2.5 py-1 text-xs text-warning-foreground">
+            <span className="size-[5px] rounded-full bg-warning-foreground" aria-hidden="true" />
+            No source passages were cited for this answer.
+          </p>
+        )}
       </div>
 
-      {open && (
+      {open && citations.length > 0 && (
         <div className="overflow-hidden rounded-md border border-border">
           <div className="border-b border-border bg-muted px-3 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
             Sources
