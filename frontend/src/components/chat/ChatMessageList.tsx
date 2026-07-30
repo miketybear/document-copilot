@@ -1,10 +1,11 @@
 import type { ChatStatus, UIMessage } from 'ai'
-import { ArrowDown } from 'lucide-react'
+import { ArrowDown, Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 
 import { CitationCluster } from '@/components/chat/Citation'
 import { MarkdownAnswer } from '@/components/chat/MarkdownAnswer'
 import { getCitations } from '@/lib/citations'
+import { cn } from '@/lib/utils'
 
 const STATUS_LABEL: Record<'submitted' | 'streaming', string> = {
   submitted: 'Searching documents…',
@@ -17,6 +18,34 @@ function StatusLine({ status }: { status: 'submitted' | 'streaming' }) {
       <span className="size-1.5 animate-pulse rounded-full bg-primary" aria-hidden="true" />
       {STATUS_LABEL[status]}
     </p>
+  )
+}
+
+function CopyButton({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      return
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      aria-label={copied ? 'Copied' : 'Copy question'}
+      className={cn(
+        'rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-foreground focus-visible:opacity-100 group-hover/user-message:opacity-100',
+        className,
+      )}
+    >
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+    </button>
   )
 }
 
@@ -133,9 +162,12 @@ export function ChatMessageList({
                 if (el) userMessageRefs.current.set(message.id, el)
                 else userMessageRefs.current.delete(message.id)
               }}
-              className="ml-auto max-w-[78%] rounded-2xl rounded-br-sm border border-border bg-secondary px-3.5 py-2 text-sm text-secondary-foreground"
+              className="group/user-message ml-auto flex max-w-[78%] items-start gap-1"
             >
-              <p className="whitespace-pre-wrap">{text}</p>
+              <CopyButton text={text} className="mt-1.5 shrink-0" />
+              <div className="rounded-2xl rounded-br-sm border border-border bg-secondary px-3.5 py-2 text-sm text-secondary-foreground">
+                <p className="whitespace-pre-wrap">{text}</p>
+              </div>
             </div>
           )
         }
