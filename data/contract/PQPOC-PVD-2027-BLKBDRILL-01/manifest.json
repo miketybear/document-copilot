@@ -1,0 +1,58 @@
+[
+  {
+    "file": "01_Hop_dong_khoan_Main_PVD_PQPOC.pdf",
+    "title": "Hợp đồng Dịch vụ Cung cấp Giàn khoan và Dịch vụ Khoan Dầu khí — Dự án Phát triển Mỏ khí Lô B (PQPOC-PVD-2027-BLKB/DRILL-01)",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2027-01-15",
+    "group_code": "PQPOC-PVD-2027-BLKBDRILL-01",
+    "group_title": "Hợp đồng Dịch vụ Khoan Lô B — PQPOC & PV Drilling (PQPOC-PVD-2027-BLKB/DRILL-01)",
+    "doc_role": "main"
+  },
+  {
+    "file": "02_A_Pham_vi_cong_viec.pdf",
+    "title": "Phụ lục A: Phạm vi Công việc và Chương trình Khoan",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2027-01-15",
+    "group_code": "PQPOC-PVD-2027-BLKBDRILL-01",
+    "doc_role": "appendix"
+  },
+  {
+    "file": "03_B_Yeu_cau_ky_thuat.pdf",
+    "title": "Phụ lục B: Thông số Kỹ thuật và Yêu cầu Giàn khoan",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2027-01-15",
+    "group_code": "PQPOC-PVD-2027-BLKBDRILL-01",
+    "doc_role": "appendix"
+  },
+  {
+    "file": "04_C_Bieu_gia_thanh_toan.pdf",
+    "title": "Phụ lục C: Biểu giá Dịch vụ và Điều khoản Thanh toán",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2027-01-15",
+    "group_code": "PQPOC-PVD-2027-BLKBDRILL-01",
+    "doc_role": "appendix"
+  },
+  {
+    "file": "05_D_HSE_An_toan.pdf",
+    "title": "Phụ lục D: Tiêu chuẩn An toàn, Sức khỏe và Bảo vệ Môi trường (HSE)",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2027-01-15",
+    "group_code": "PQPOC-PVD-2027-BLKBDRILL-01",
+    "doc_role": "appendix"
+  }
+]
