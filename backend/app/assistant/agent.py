@@ -37,9 +37,13 @@ async def generate_title(text: str) -> str:
 
 
 @agent.tool
-async def search_documents(ctx: RunContext[DocumentAgentDeps], query: str) -> list[SourcePassage]:
-    """Search the internal document corpus for passages relevant to the query."""
-    return await retriever.search_documents(ctx.deps.supabase_client, query)
+async def search_documents(
+    ctx: RunContext[DocumentAgentDeps], query: str, group_code: str | None = None
+) -> list[SourcePassage]:
+    """Search the internal document corpus for passages relevant to the query. If the user
+    names a specific document set (e.g. a contract number), pass its code as group_code to
+    scope the search to just that contract and its appendices instead of the whole corpus."""
+    return await retriever.search_documents(ctx.deps.supabase_client, query, group_code=group_code)
 
 
 @agent.tool

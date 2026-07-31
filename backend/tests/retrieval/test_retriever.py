@@ -94,6 +94,28 @@ async def test_search_documents_fuses_rankings_and_returns_passages(monkeypatch)
     assert results[0].heading_path == ["Intro"]
 
 
+async def test_search_documents_forwards_group_code_to_both_rpc_calls(monkeypatch):
+    monkeypatch.setattr(retriever, "embed_query", lambda _text: [0.0, 0.0, 0.0])
+    captured_params = []
+
+    class SpyingClient(FakeClient):
+        def rpc(self, name, params):
+            captured_params.append((name, params))
+            return super().rpc(name, params)
+
+    client = SpyingClient(
+        table_rows=[ROW_A],
+        rpc_rows={
+            "search_chunks_semantic": [{"id": "11111111-1111-1111-1111-111111111111"}],
+            "search_chunks_fulltext": [{"id": "11111111-1111-1111-1111-111111111111"}],
+        },
+    )
+
+    await retriever.search_documents(client, "some query", k=2, group_code="HD-2026-01")
+
+    assert all(params["group_code"] == "HD-2026-01" for _name, params in captured_params)
+
+
 async def test_search_documents_with_no_matches_returns_empty(monkeypatch):
     monkeypatch.setattr(retriever, "embed_query", lambda _text: [0.0, 0.0, 0.0])
 

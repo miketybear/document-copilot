@@ -30,6 +30,9 @@ async def ingest_file(data_dir: Path, entry: dict) -> None:
         effective_date=effective_date,
         source_location=str(path),
         content_markdown=markdown,
+        group_code=entry.get("group_code"),
+        group_title=entry.get("group_title"),
+        doc_role=entry.get("doc_role"),
     )
     await insert_chunks(document_id, chunks, embeddings)
     print(f"  done: document_id={document_id}")

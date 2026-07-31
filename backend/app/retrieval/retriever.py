@@ -12,13 +12,17 @@ CANDIDATE_POOL_SIZE = 20
 _PASSAGE_SELECT = "*, source_documents(title, document_type, department, version, effective_date)"
 
 
-async def search_documents(client: AsyncClient, query: str, k: int = 10) -> list[SourcePassage]:
+async def search_documents(
+    client: AsyncClient, query: str, k: int = 10, group_code: str | None = None
+) -> list[SourcePassage]:
     """The main hybrid-search bounded tool: embeds the query, runs semantic + full-text
-    search, fuses the two ranked lists with RRF, and returns the top-k passages."""
+    search, fuses the two ranked lists with RRF, and returns the top-k passages. If
+    group_code is given, results are scoped to source_documents in that document_groups
+    row (e.g. a contract and its appendices) instead of the whole corpus."""
     query_embedding = embed_query(query)
 
-    semantic_results = await search_semantic(client, query_embedding, match_count=CANDIDATE_POOL_SIZE)
-    fulltext_results = await search_fulltext(client, query, match_count=CANDIDATE_POOL_SIZE)
+    semantic_results = await search_semantic(client, query_embedding, match_count=CANDIDATE_POOL_SIZE, group_code=group_code)
+    fulltext_results = await search_fulltext(client, query, match_count=CANDIDATE_POOL_SIZE, group_code=group_code)
 
     rankings = [
         [row["id"] for row in semantic_results],

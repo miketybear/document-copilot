@@ -78,11 +78,27 @@ class DocumentType(StrEnum):
     policy = "policy"
     guideline = "guideline"
     work_instruction = "work_instruction"
+    contract = "contract"
 
 
 class DocumentStatus(StrEnum):
     current = "current"
     superseded = "superseded"
+
+
+class DocumentGroup(Base):
+    """Groups related source documents (e.g. a contract and its appendices) so they can be
+    filtered/expanded together at retrieval time, independent of each member's own supersede
+    lifecycle."""
+
+    __tablename__ = "document_groups"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    group_code: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class SourceDocument(Base):
@@ -103,6 +119,10 @@ class SourceDocument(Base):
     superseded_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("source_documents.id"), nullable=True
     )
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document_groups.id"), nullable=True, index=True
+    )
+    doc_role: Mapped[str | None] = mapped_column(String, nullable=True)
     source_location: Mapped[str | None] = mapped_column(String, nullable=True)
     content_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

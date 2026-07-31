@@ -24,13 +24,18 @@ Step-by-step CLI guide for adding, updating, or re-ingesting documents into the 
      "department": "Human Resources",
      "owner": "Company Name",
      "version": "1.0",
-     "effective_date": "2026-01-15"
+     "effective_date": "2026-01-15",
+     "group_code": "HD-2026-01",
+     "group_title": "Hợp đồng khoan HD-2026-01",
+     "doc_role": "main"
    }
    ```
 
    `file`, `title`, and `document_type` are required. `department`, `owner`, `version` are optional (`null`/omit if unknown). `effective_date` is `null` or an ISO date string.
 
-3. **Supersede semantics**: `upsert_document` (`load.py:18`) matches on exact `title` string against the current `source_documents` row. Re-running the manifest with the *same* title creates a new row and flips the old one to `status=superseded` — it does not update in place, and it does not match on filename. Rename the title deliberately if you want a new document lineage instead of a new version of an existing one.
+   `group_code`, `group_title`, and `doc_role` are optional — use them to tie a set of related files (e.g. a contract and its appendices) together under one `document_groups` row so they can later be filtered/retrieved as a set. `group_code` is the stable lookup key (e.g. a contract number); the group row is created on first use and reused for every subsequent entry with the same `group_code` — only the entry that creates it needs `group_title` (others may omit it). `doc_role` is a free-text label (`"main"`, `"appendix"`, ...) with no enforced values. Omit all three for a standalone document — this is fully backward compatible with existing manifest entries.
+
+3. **Supersede semantics**: `upsert_document` (`load.py`) matches on exact `title` string *within the same group* (or, for ungrouped entries, against other ungrouped documents only) against the current `source_documents` row. Re-running the manifest with the same `title` and `group_code` creates a new row and flips the old one to `status=superseded` — it does not update in place, and it does not match on filename. A grouped document and an ungrouped document can safely share the same title without colliding. `group_id` itself is stable across re-ingests, so superseding the main contract document does not detach its appendices from the group. Rename the title deliberately if you want a new document lineage instead of a new version of an existing one.
 
 ## Running locally
 
