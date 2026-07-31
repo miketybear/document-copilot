@@ -1,9 +1,18 @@
+import { Square } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
-export function ChatInput({ disabled, onSend }: { disabled: boolean; onSend: (text: string) => void }) {
+export function ChatInput({
+  disabled,
+  onSend,
+  onStop,
+}: {
+  disabled: boolean
+  onSend: (text: string) => void
+  onStop: () => void
+}) {
   const [text, setText] = useState('')
 
   function submit() {
@@ -36,9 +45,15 @@ export function ChatInput({ disabled, onSend }: { disabled: boolean; onSend: (te
         rows={1}
         className="max-h-40 min-h-0 resize-none overflow-y-auto border-none bg-transparent py-1.5 shadow-none focus-visible:ring-0"
       />
-      <Button type="submit" disabled={disabled || !text.trim()}>
-        Send
-      </Button>
+      {disabled ? (
+        <Button type="button" onClick={onStop} aria-label="Stop generating">
+          <Square className="size-4" />
+        </Button>
+      ) : (
+        <Button type="submit" disabled={!text.trim()}>
+          Send
+        </Button>
+      )}
     </form>
   )
 }

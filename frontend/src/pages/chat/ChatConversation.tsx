@@ -24,7 +24,7 @@ export function ChatConversation({
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error, stop } = useChat({
     id: threadId,
     messages: initialMessages,
     transport: new DefaultChatTransport({
@@ -74,6 +74,7 @@ export function ChatConversation({
         <ChatInput
           disabled={status === 'streaming' || status === 'submitted'}
           onSend={(text) => sendMessage({ text })}
+          onStop={stop}
         />
       </div>
     </div>
