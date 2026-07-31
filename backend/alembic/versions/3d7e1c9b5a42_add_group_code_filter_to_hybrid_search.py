@@ -30,7 +30,7 @@ def upgrade() -> None:
 
     op.execute(f"""
         CREATE FUNCTION search_chunks_semantic(
-            query_embedding vector({_EMBEDDING_DIM}), match_count int, group_code text DEFAULT NULL
+            query_embedding vector({_EMBEDDING_DIM}), match_count int, filter_group_code text DEFAULT NULL
         )
         RETURNS TABLE (
             id uuid,
@@ -48,9 +48,9 @@ def upgrade() -> None:
             JOIN source_documents sd ON sd.id = dc.document_id
             WHERE sd.status = 'current'
               AND (
-                group_code IS NULL
+                filter_group_code IS NULL
                 OR sd.group_id IN (
-                  SELECT dg.id FROM document_groups dg WHERE dg.group_code ILIKE '%' || group_code || '%'
+                  SELECT dg.id FROM document_groups dg WHERE dg.group_code ILIKE '%' || filter_group_code || '%'
                 )
               )
             ORDER BY dc.embedding <=> query_embedding
@@ -60,7 +60,7 @@ def upgrade() -> None:
 
     op.execute("""
         CREATE FUNCTION search_chunks_fulltext(
-            query_text text, match_count int, group_code text DEFAULT NULL
+            query_text text, match_count int, filter_group_code text DEFAULT NULL
         )
         RETURNS TABLE (
             id uuid,
@@ -79,9 +79,9 @@ def upgrade() -> None:
             WHERE sd.status = 'current'
               AND dc.search_vector @@ plainto_tsquery('english', query_text)
               AND (
-                group_code IS NULL
+                filter_group_code IS NULL
                 OR sd.group_id IN (
-                  SELECT dg.id FROM document_groups dg WHERE dg.group_code ILIKE '%' || group_code || '%'
+                  SELECT dg.id FROM document_groups dg WHERE dg.group_code ILIKE '%' || filter_group_code || '%'
                 )
               )
             ORDER BY rank DESC

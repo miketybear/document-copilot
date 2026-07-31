@@ -11,7 +11,7 @@ async def search_semantic(
 ) -> list[dict]:
     response = await client.rpc(
         "search_chunks_semantic",
-        {"query_embedding": query_embedding, "match_count": match_count, "group_code": group_code},
+        {"query_embedding": query_embedding, "match_count": match_count, "filter_group_code": group_code},
     ).execute()
     return response.data
 
@@ -24,6 +24,6 @@ async def search_fulltext(
 ) -> list[dict]:
     response = await client.rpc(
         "search_chunks_fulltext",
-        {"query_text": query_text, "match_count": match_count, "group_code": group_code},
+        {"query_text": query_text, "match_count": match_count, "filter_group_code": group_code},
     ).execute()
     return response.data

@@ -113,7 +113,7 @@ async def test_search_documents_forwards_group_code_to_both_rpc_calls(monkeypatc
 
     await retriever.search_documents(client, "some query", k=2, group_code="HD-2026-01")
 
-    assert all(params["group_code"] == "HD-2026-01" for _name, params in captured_params)
+    assert all(params["filter_group_code"] == "HD-2026-01" for _name, params in captured_params)
 
 
 async def test_search_documents_with_no_matches_returns_empty(monkeypatch):

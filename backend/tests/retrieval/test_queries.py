@@ -11,9 +11,10 @@ from app.retrieval.retriever import search_documents
 pytestmark = pytest.mark.integration
 
 
-async def _create_grouped_chunk(client, group_code: str, chunk_text: str) -> tuple[str, list[float]]:
+async def _create_grouped_chunk(client, cleanup_rows, group_code: str, chunk_text: str) -> tuple[str, list[float]]:
     group = await client.table("document_groups").insert({"group_code": group_code, "title": group_code}).execute()
     group_id = group.data[0]["id"]
+    cleanup_rows["document_groups"].append(group_id)
 
     doc = await (
         client.table("source_documents")
@@ -28,6 +29,7 @@ async def _create_grouped_chunk(client, group_code: str, chunk_text: str) -> tup
         .execute()
     )
     document_id = doc.data[0]["id"]
+    cleanup_rows["source_documents"].append(document_id)
 
     embedding = [0.001] * settings.azure_openai_embedding_dimensions
     chunk = await (
@@ -35,7 +37,9 @@ async def _create_grouped_chunk(client, group_code: str, chunk_text: str) -> tup
         .insert({"document_id": document_id, "chunk_index": 0, "chunk_text": chunk_text, "embedding": embedding})
         .execute()
     )
-    return chunk.data[0]["id"], embedding
+    chunk_id = chunk.data[0]["id"]
+    cleanup_rows["document_chunks"].append(chunk_id)
+    return chunk_id, embedding
 
 
 async def test_fulltext_search_finds_relevant_chunk():
@@ -64,10 +68,12 @@ async def test_search_documents_returns_passages_from_the_right_document():
     assert any("Safety Level Transmitter" in p.document_title for p in results)
 
 
-async def test_search_semantic_scopes_to_group_code():
+async def test_search_semantic_scopes_to_group_code(cleanup_rows):
     client = await get_service_role_client()
     group_code = f"group-{uuid.uuid4()}"
-    chunk_id, embedding = await _create_grouped_chunk(client, group_code, f"drilling contract clause {uuid.uuid4()}")
+    chunk_id, embedding = await _create_grouped_chunk(
+        client, cleanup_rows, group_code, f"drilling contract clause {uuid.uuid4()}"
+    )
 
     scoped = await search_semantic(client, embedding, match_count=5, group_code=group_code)
     assert any(row["id"] == chunk_id for row in scoped)
@@ -76,22 +82,24 @@ async def test_search_semantic_scopes_to_group_code():
     assert not any(row["id"] == chunk_id for row in other_group)
 
 
-async def test_search_semantic_group_code_matches_by_substring():
+async def test_search_semantic_group_code_matches_by_substring(cleanup_rows):
     client = await get_service_role_client()
     unique_suffix = str(uuid.uuid4())
     group_code = f"HD-2026-{unique_suffix}"
-    chunk_id, embedding = await _create_grouped_chunk(client, group_code, f"drilling contract clause {uuid.uuid4()}")
+    chunk_id, embedding = await _create_grouped_chunk(
+        client, cleanup_rows, group_code, f"drilling contract clause {uuid.uuid4()}"
+    )
 
     # A partial fragment of the code (case-insensitive) should still match.
     scoped = await search_semantic(client, embedding, match_count=5, group_code=unique_suffix.upper())
     assert any(row["id"] == chunk_id for row in scoped)
 
 
-async def test_search_fulltext_scopes_to_group_code():
+async def test_search_fulltext_scopes_to_group_code(cleanup_rows):
     client = await get_service_role_client()
     unique_text = f"drilling contract penalty clause {uuid.uuid4()}"
     group_code = f"group-{uuid.uuid4()}"
-    chunk_id, _ = await _create_grouped_chunk(client, group_code, unique_text)
+    chunk_id, _ = await _create_grouped_chunk(client, cleanup_rows, group_code, unique_text)
 
     scoped = await search_fulltext(client, unique_text, match_count=5, group_code=group_code)
     assert any(row["id"] == chunk_id for row in scoped)
