@@ -1,0 +1,58 @@
+[
+  {
+    "file": "01_PVD_PETRONAS_Main_Contract.pdf",
+    "title": "Hợp đồng Dịch vụ Khoan Dầu khí Ngoài khơi PVD-PET-2026-088 (PETRONAS Carigali / PV Drilling)",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2026-08-01",
+    "group_code": "PVD-PET-2026-088",
+    "group_title": "Hợp đồng Dịch vụ Khoan Dầu khí Ngoài khơi PVD-PET-2026-088 — PETRONAS Carigali / PV Drilling",
+    "doc_role": "main"
+  },
+  {
+    "file": "02_Exhibit_A_Rig_Specifications.pdf",
+    "title": "Phụ lục A: Thông số Kỹ thuật và Kiểm kê Thiết bị Giàn PV DRILLING VIII",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2026-08-01",
+    "group_code": "PVD-PET-2026-088",
+    "doc_role": "appendix"
+  },
+  {
+    "file": "03_Exhibit_B_Schedule_of_Rates.pdf",
+    "title": "Phụ lục B: Biểu phí Cước ngày, Phí Huy động và Quy trình Thanh toán",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2026-08-01",
+    "group_code": "PVD-PET-2026-088",
+    "doc_role": "appendix"
+  },
+  {
+    "file": "04_Exhibit_C_HSES_Procedures.pdf",
+    "title": "Phụ lục C: Quy định An toàn, Sức khỏe, Môi trường và An ninh (HSES)",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2026-08-01",
+    "group_code": "PVD-PET-2026-088",
+    "doc_role": "appendix"
+  },
+  {
+    "file": "05_Exhibit_D_Manning_Scale.pdf",
+    "title": "Phụ lục D: Sơ đồ Định biên Nhân sự và Tiêu chuẩn Bằng cấp",
+    "document_type": "contract",
+    "department": "Contracts & Procurement",
+    "owner": "PV Drilling",
+    "version": "1.0",
+    "effective_date": "2026-08-01",
+    "group_code": "PVD-PET-2026-088",
+    "doc_role": "appendix"
+  }
+]
