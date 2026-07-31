@@ -9,6 +9,7 @@ class SourcePassage(BaseModel):
     department: str | None
     version: str | None
     effective_date: str | None
+    group_title: str | None
     chunk_index: int
     heading_path: list[str]
     chunk_text: str

@@ -50,6 +50,7 @@ def build_citation_part(passage: SourcePassage) -> dict:
             "department": passage.department,
             "version": passage.version,
             "effectiveDate": passage.effective_date,
+            "groupTitle": passage.group_title,
             "headingPath": passage.heading_path,
             "excerpt": passage.chunk_text,
         },

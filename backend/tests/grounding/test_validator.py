@@ -14,6 +14,7 @@ def _passage(chunk_id: str) -> SourcePassage:
         department="HR",
         version="1.0",
         effective_date="2024-01-01",
+        group_title=None,
         chunk_index=0,
         heading_path=[],
         chunk_text="some text",
@@ -74,6 +75,21 @@ def test_strip_inline_citation_markers_removes_multiple_markers_across_sentences
 
 def test_strip_inline_citation_markers_removes_chunk_id_leak():
     text = "The policy requires manager approval [chunk_id: abc-123]."
+
+    assert strip_inline_citation_markers(text) == "The policy requires manager approval."
+
+
+def test_strip_inline_citation_markers_removes_bare_uuid_leak_with_no_brackets():
+    text = (
+        "Phi giai huy dong la 1.800.000 USD. citefa098285-924e-4d14-8e8e-"
+        "ea9261f81b9b3501e04b-9217-42c0-b39f-ac1a5a312881"
+    )
+
+    assert strip_inline_citation_markers(text) == "Phi giai huy dong la 1.800.000 USD."
+
+
+def test_strip_inline_citation_markers_removes_bare_single_uuid_leak():
+    text = "The policy requires manager approval. source:fa098285-924e-4d14-8e8e-ea9261f81b9b"
 
     assert strip_inline_citation_markers(text) == "The policy requires manager approval."
 

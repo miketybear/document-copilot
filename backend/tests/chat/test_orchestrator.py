@@ -20,6 +20,7 @@ def _passage(chunk_id: str) -> SourcePassage:
         department="HR",
         version="1.0",
         effective_date="2024-01-01",
+        group_title=None,
         chunk_index=0,
         heading_path=[],
         chunk_text="some text",

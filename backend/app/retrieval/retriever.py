@@ -9,7 +9,9 @@ from app.retrieval.types import SourcePassage
 
 CANDIDATE_POOL_SIZE = 20
 
-_PASSAGE_SELECT = "*, source_documents(title, document_type, department, version, effective_date)"
+_PASSAGE_SELECT = (
+    "*, source_documents(title, document_type, department, version, effective_date, document_groups(title))"
+)
 
 
 async def search_documents(
@@ -79,6 +81,7 @@ def _is_uuid(value: str) -> bool:
 
 def _row_to_passage(row: dict) -> SourcePassage:
     doc = row["source_documents"]
+    group = doc.get("document_groups")
     return SourcePassage(
         chunk_id=row["id"],
         document_id=row["document_id"],
@@ -87,6 +90,7 @@ def _row_to_passage(row: dict) -> SourcePassage:
         department=doc["department"],
         version=doc["version"],
         effective_date=doc["effective_date"],
+        group_title=group["title"] if group else None,
         chunk_index=row["chunk_index"],
         heading_path=row["heading_path"] or [],
         chunk_text=row["chunk_text"],
