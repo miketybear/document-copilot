@@ -11,11 +11,20 @@ _INLINE_CITATION_MARKER = re.compile(
     re.IGNORECASE,
 )
 
-# Occasionally the leak skips the brackets entirely too — e.g. "...caring.citefa098285-924e-
-# 4d14-8e8e-ea9261f81b9b3501e04b-9217-42c0-b39f-ac1a5a312881" (the word glued directly to one
-# or more raw chunk_id UUIDs, no separator). Catch that shape directly since the bracket regex
-# above can't.
+# The underlying model has its own native citation encoding: "cite" wrapped in Private Use
+# Area sentinel characters (U+E200 / U+E202 / U+E201), e.g. literally
+# cite + U+E202 + "690f1be4-87c7-488d-b098-96332f79118b" + U+E201 - that sometimes leaks into
+# the plain-text answer verbatim instead of staying confined to the model's own tool-call
+# encoding. The sentinels have no glyph in most editors/terminals, which is why this went
+# unnoticed until an actual codepoint-level inspection of a raw answer.
 _UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+_CITE_START, _CITE_SEP, _CITE_END = chr(0xE200), chr(0xE202), chr(0xE201)
+_NATIVE_CITATION_MARKER = re.compile(
+    rf"[ \t]?{_CITE_START}?cite{_CITE_SEP}{_UUID}{_CITE_END}", re.IGNORECASE
+)
+
+# Defense in depth in case the model instead writes the same idea out as plain ASCII (e.g.
+# "cite: <uuid>") rather than the native sentinel-wrapped form above.
 _BARE_CITATION_MARKER = re.compile(
     rf"[ \t]?(?:cites?|citations?|sources?|refs?|references?|chunk[-_]?ids?)\s*:?\s*(?:{_UUID}\s*)+",
     re.IGNORECASE,
@@ -38,8 +47,10 @@ def validate_grounding(answer: GroundedAnswer, retrieved_passages: list[SourcePa
 
 
 def strip_inline_citation_markers(answer: str) -> str:
-    """Remove bracket-style and bare citation-word-plus-UUID markers that leaked into the prose."""
+    """Remove bracket-style, native sentinel-wrapped, and bare citation markers that leaked
+    into the prose."""
     cleaned = _INLINE_CITATION_MARKER.sub("", answer)
+    cleaned = _NATIVE_CITATION_MARKER.sub("", cleaned)
     cleaned = _BARE_CITATION_MARKER.sub("", cleaned)
     cleaned = re.sub(r"[ \t]+", " ", cleaned)
     cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)

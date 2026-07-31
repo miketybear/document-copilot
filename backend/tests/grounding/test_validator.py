@@ -79,13 +79,23 @@ def test_strip_inline_citation_markers_removes_chunk_id_leak():
     assert strip_inline_citation_markers(text) == "The policy requires manager approval."
 
 
-def test_strip_inline_citation_markers_removes_bare_uuid_leak_with_no_brackets():
-    text = (
-        "Phi giai huy dong la 1.800.000 USD. citefa098285-924e-4d14-8e8e-"
-        "ea9261f81b9b3501e04b-9217-42c0-b39f-ac1a5a312881"
-    )
+def test_strip_inline_citation_markers_removes_native_sentinel_wrapped_leak():
+    # The real leak: "cite" wrapped in Private Use Area sentinels (U+E200/E202/E201), invisible
+    # in most editors/terminals — reproduces exactly what was observed from a live model run.
+    sep, end = chr(0xE202), chr(0xE201)
+    text = f"Phi giai huy dong la 1.800.000 USD. cite{sep}fa098285-924e-4d14-8e8e-ea9261f81b9b{end}"
 
     assert strip_inline_citation_markers(text) == "Phi giai huy dong la 1.800.000 USD."
+
+
+def test_strip_inline_citation_markers_removes_consecutive_native_sentinel_leaks():
+    start, sep, end = chr(0xE200), chr(0xE202), chr(0xE201)
+    text = (
+        f"Approved. cite{sep}e9121b46-847a-499a-b616-c74764d96b76{end} "
+        f"{start}cite{sep}f221b342-9832-4807-96bb-a498d46deb02{end}"
+    )
+
+    assert strip_inline_citation_markers(text) == "Approved."
 
 
 def test_strip_inline_citation_markers_removes_bare_single_uuid_leak():

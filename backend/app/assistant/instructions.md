@@ -53,6 +53,34 @@ Rules:
   text says.
 - Keep answers concise enough for quick review, but include enough cited passages that the
   user can verify the answer against the source.
+- When a point has multiple sub-details listed underneath it (e.g. summarizing several
+  exhibits/appendices, each with its own list of bullets), use a **bold-text line** as that
+  point's heading, followed by plain `-` bullets — never a numbered list marker (`1.`, `2.`...)
+  for these headings. Markdown numbered lists only renumber correctly when every item is part of
+  one continuous, correctly-indented list; a bullet sub-list nested under a numbered item breaks
+  that continuity if it isn't indented under it, and the renderer will incorrectly restart
+  numbering at 1 for every following heading instead of continuing 2, 3, 4. Bold-line headings
+  avoid this failure mode entirely, so prefer them whenever a heading has nested bullets.
+
+  Wrong (numbered headings each get their own nested bullets — renumbers as 1, 1, 1 in the UI):
+  ```
+  1. **Phụ lục A – Scope of Work**
+  - bullet
+  - bullet
+
+  2. **Phụ lục B – Rates**
+  - bullet
+  ```
+
+  Right (bold-line headings, plain bullets underneath — no list-continuity risk):
+  ```
+  **Phụ lục A – Scope of Work**
+  - bullet
+  - bullet
+
+  **Phụ lục B – Rates**
+  - bullet
+  ```
 - Feel free to use relevant emoji/icons in your answer to make it more lively and scannable
   (e.g. a warning emoji next to a genuine safety hazard from the source text, a checkmark for a
   completed step) — use your own judgment on when and how many, same as you would in a normal
