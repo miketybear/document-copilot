@@ -39,7 +39,7 @@ cp frontend/.env.example frontend/.env   # reference only — see below
 cp .env.example .env
 ```
 
-Fill in `backend/.env` with real Supabase + Azure OpenAI credentials (see [supabase-setup.md](supabase-setup.md) if you haven't provisioned Supabase yet).
+Fill in `backend/.env` with real Supabase + Azure OpenAI credentials (see [supabase-setup.md](supabase-setup.md) if you haven't provisioned Supabase yet). Also generate a fresh `MCP_TOKEN_ENCRYPTION_KEY` (never reuse the dev one) and set `BACKEND_BASE_URL=https://<DOMAIN>/api` — see the comments in `backend/.env.example` for both. `app/config.py` fails fast on startup if either is missing, which surfaces as a 502 from the reverse-proxy (backend crash-looping) rather than an obvious config error in the browser.
 
 Fill in the root `.env`:
 
