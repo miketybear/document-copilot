@@ -23,6 +23,21 @@ export type ChatThreadWithMessages = ChatThread & {
   messages: ChatMessageRow[]
 }
 
+export type MCPConnection = {
+  id: string
+  name: string
+  server_url: string
+  auth_type: 'api_token' | 'oauth2'
+  status: 'pending' | 'connected' | 'token_expired' | 'error'
+  last_error: string | null
+  created_by: string
+  oauth_client_id: string | null
+  oauth_token_endpoint: string | null
+  token_expires_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export const api = {
   ...http,
   chat: {
@@ -32,5 +47,17 @@ export const api = {
     setThreadPinned: (id: string, pinned: boolean) =>
       http.patch<ChatThread>(`/chat/threads/${id}`, { pinned }),
     deleteThread: (id: string) => http.delete<void>(`/chat/threads/${id}`),
+  },
+  mcp: {
+    listConnections: () => http.get<MCPConnection[]>('/mcp/connections'),
+    createApiTokenConnection: (name: string, serverUrl: string, apiToken: string) =>
+      http.post<MCPConnection>('/mcp/connections', { name, server_url: serverUrl, api_token: apiToken }),
+    startOAuthConnection: (name: string, serverUrl: string) =>
+      http.post<{ connection: MCPConnection; authorize_url: string }>('/mcp/connections/oauth', {
+        name,
+        server_url: serverUrl,
+      }),
+    deleteConnection: (id: string) => http.delete<void>(`/mcp/connections/${id}`),
+    testConnection: (id: string) => http.post<MCPConnection>(`/mcp/connections/${id}/test`),
   },
 }

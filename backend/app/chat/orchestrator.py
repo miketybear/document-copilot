@@ -14,6 +14,7 @@ from app.chat.messages import (
     ChatStreamRequest,
     build_assistant_message,
     build_citation_part,
+    build_tool_source_citation_part,
     derive_title,
     extract_text,
     to_stored_content,
@@ -22,6 +23,8 @@ from app.chat.streaming import stream_error, stream_text_reply
 from app.database import chats
 from app.database.supabase import get_user_scoped_client
 from app.grounding.validator import GroundingError, strip_inline_citation_markers, validate_grounding
+from app.mcp.citations import extract_tool_source_citations
+from app.mcp.toolsets import MCPToolsetBundle, build_toolsets
 from app.retrieval.types import SourcePassage
 
 logger = structlog.get_logger(__name__)
@@ -55,7 +58,7 @@ async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> Async
         deps = DocumentAgentDeps(user_id=user.id, thread_id=request.id, supabase_client=client)
 
         try:
-            result, retrieved_passages = await _run_agent_grounded(extract_text(user_message), deps)
+            result, retrieved_passages, mcp_bundle = await _run_agent_grounded(extract_text(user_message), deps)
         except GroundingError as exc:
             logger.error("chat.grounding_failed", thread_id=request.id, detail=str(exc))
             async for chunk in stream_error(
@@ -73,7 +76,10 @@ async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> Async
 
         assistant_message_id = str(uuid.uuid4())
         cited_passages = _resolve_cited_passages(result.output, retrieved_passages)
-        citation_parts = [build_citation_part(passage) for passage in cited_passages]
+        tool_source_citations = extract_tool_source_citations(result.all_messages(), mcp_bundle)
+        citation_parts = [build_citation_part(passage) for passage in cited_passages] + [
+            build_tool_source_citation_part(tool_source) for tool_source in tool_source_citations
+        ]
 
         async for chunk in stream_text_reply(assistant_message_id, result.output.answer, citation_parts):
             yield chunk
@@ -84,7 +90,10 @@ async def run_turn(user: AuthenticatedUser, request: ChatStreamRequest) -> Async
             "assistant",
             build_assistant_message(assistant_message_id, result.output.answer, citation_parts),
         )
-        await chats.append_citations(user, assistant_message["id"], [c.chunk_id for c in result.output.citations])
+        citation_rows = [
+            {"citation_kind": "document", "chunk_id": c.chunk_id} for c in result.output.citations
+        ] + [{"citation_kind": "tool_source", "tool_source": tool_source} for tool_source in tool_source_citations]
+        await chats.append_citations(user, assistant_message["id"], citation_rows)
     finally:
         # Always wait for it, success or failure, so the thread never gets stuck untitled.
         if title_task:
@@ -112,23 +121,28 @@ def _resolve_cited_passages(
 
 async def _run_agent_grounded(
     user_prompt: str, deps: DocumentAgentDeps
-) -> tuple[AgentRunResult, list[SourcePassage]]:
+) -> tuple[AgentRunResult, list[SourcePassage], MCPToolsetBundle]:
     """Run the agent and validate its citations, retrying once with corrective feedback
     if a citation doesn't match a retrieved chunk_id. Raises GroundingError if the retry
-    is also ungrounded."""
-    result = await agent.run(user_prompt, deps=deps)
+    is also ungrounded. MCP tool calls aren't subject to this chunk-grounding check — see
+    app.mcp.citations for how those are cited instead."""
+    mcp_toolsets = await build_toolsets()
+    result = await agent.run(user_prompt, deps=deps, toolsets=mcp_toolsets.toolsets)
     retrieved_passages = _extract_retrieved_passages(result.all_messages())
 
     try:
         validate_grounding(result.output, retrieved_passages)
     except GroundingError as exc:
         result = await agent.run(
-            _GROUNDING_RETRY_PROMPT.format(error=exc), message_history=result.all_messages(), deps=deps
+            _GROUNDING_RETRY_PROMPT.format(error=exc),
+            message_history=result.all_messages(),
+            deps=deps,
+            toolsets=mcp_toolsets.toolsets,
         )
         retrieved_passages = _extract_retrieved_passages(result.all_messages())
         validate_grounding(result.output, retrieved_passages)
 
-    return result, retrieved_passages
+    return result, retrieved_passages, mcp_toolsets
 
 
 def _extract_retrieved_passages(messages: list[ModelMessage]) -> list[SourcePassage]:

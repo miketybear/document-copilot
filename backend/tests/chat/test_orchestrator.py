@@ -6,6 +6,7 @@ from app.assistant.outputs import Citation, GroundedAnswer
 from app.auth.dependencies import AuthenticatedUser
 from app.chat import orchestrator
 from app.chat.messages import ChatStreamRequest, UIMessage, UIMessagePart
+from app.mcp.toolsets import MCPToolsetBundle
 from app.retrieval.types import SourcePassage
 
 USER = AuthenticatedUser(id="user-1", email="user@example.com", access_token="fake-token")
@@ -52,6 +53,7 @@ async def _run_and_collect(
     monkeypatch, agent_result: FakeAgentResult | AsyncMock
 ) -> tuple[list[str], AsyncMock, AsyncMock]:
     monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator, "build_toolsets", AsyncMock(return_value=MCPToolsetBundle()))
     if not isinstance(agent_result, AsyncMock):
         agent_result = AsyncMock(return_value=agent_result)
     monkeypatch.setattr(orchestrator.agent, "run", agent_result)
@@ -82,7 +84,9 @@ async def test_valid_citation_streams_answer_and_persists_citations(monkeypatch)
     assert append_message.call_count == 2  # user message, then assistant message
     assistant_content = append_message.await_args_list[1].args[3]
     assert any(part["type"] == "data-citation" for part in assistant_content["parts"])
-    append_citations.assert_awaited_once_with(USER, "assistant-msg", ["chunk-a"])
+    append_citations.assert_awaited_once_with(
+        USER, "assistant-msg", [{"citation_kind": "document", "chunk_id": "chunk-a"}]
+    )
 
 
 async def test_fabricated_citation_streams_error_and_does_not_persist_assistant_message(monkeypatch):
@@ -115,7 +119,9 @@ async def test_fabricated_citation_is_retried_and_recovers(monkeypatch):
     assert '"type": "text-delta"' in stream or '"type":"text-delta"' in stream
     assert agent_run.call_count == 2
     assert "message_history" in agent_run.call_args.kwargs  # retry continues the same conversation
-    append_citations.assert_awaited_once_with(USER, "assistant-msg", ["chunk-a"])
+    append_citations.assert_awaited_once_with(
+        USER, "assistant-msg", [{"citation_kind": "document", "chunk_id": "chunk-a"}]
+    )
 
 
 async def test_fabricated_citation_still_bad_after_retry_streams_error(monkeypatch):
@@ -168,6 +174,7 @@ async def test_first_turn_sets_thread_title_from_generated_title(monkeypatch):
     generate_title = AsyncMock(return_value="Doing X")
 
     monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator, "build_toolsets", AsyncMock(return_value=MCPToolsetBundle()))
     monkeypatch.setattr(orchestrator.agent, "run", AsyncMock(return_value=result))
     monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
     monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())
@@ -188,6 +195,7 @@ async def test_first_turn_falls_back_to_derived_title_when_generation_fails(monk
     set_thread_title = AsyncMock()
 
     monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator, "build_toolsets", AsyncMock(return_value=MCPToolsetBundle()))
     monkeypatch.setattr(orchestrator.agent, "run", AsyncMock(return_value=result))
     monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
     monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())
@@ -207,6 +215,7 @@ async def test_later_turn_does_not_touch_thread_title(monkeypatch):
     set_thread_title = AsyncMock()
 
     monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator, "build_toolsets", AsyncMock(return_value=MCPToolsetBundle()))
     monkeypatch.setattr(orchestrator.agent, "run", AsyncMock(return_value=result))
     monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
     monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())

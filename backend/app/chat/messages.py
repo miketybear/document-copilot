@@ -57,6 +57,19 @@ def build_citation_part(passage: SourcePassage) -> dict:
     }
 
 
+def build_tool_source_citation_part(tool_source: dict) -> dict:
+    """A `data-tool-citation` UI message part for an MCP-sourced answer, carrying just enough
+    to render a "Source: <system> — <record type>" chip (no chunk/document to link to)."""
+    return {
+        "type": "data-tool-citation",
+        "data": {
+            "system": tool_source["system"],
+            "recordType": tool_source["record_type"],
+            "toolName": tool_source["tool_name"],
+        },
+    }
+
+
 def build_assistant_message(message_id: str, text: str, citation_parts: list[dict]) -> dict:
     return {
         "id": message_id,

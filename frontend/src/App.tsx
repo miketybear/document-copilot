@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { SignIn } from '@/pages/auth/SignIn'
 import { ChatPage } from '@/pages/chat/ChatPage'
 import { NewChat } from '@/pages/chat/NewChat'
+import { ConnectionsPage } from '@/pages/settings/ConnectionsPage'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       >
         <Route path="/" element={<NewChat />} />
         <Route path="/chat/:threadId" element={<ChatPage />} />
+        <Route path="/settings/connections" element={<ConnectionsPage />} />
       </Route>
     </Routes>
   )

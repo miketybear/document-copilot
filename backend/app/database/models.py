@@ -59,6 +59,11 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class CitationKind(StrEnum):
+    document = "document"  # a document_chunks passage, subject to grounding validation
+    tool_source = "tool_source"  # an MCP tool call — provenance only, not grounding-checked
+
+
 class MessageCitation(Base):
     __tablename__ = "message_citations"
 
@@ -68,10 +73,72 @@ class MessageCitation(Base):
     message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    chunk_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("document_chunks.id"), nullable=False, index=True
+    citation_kind: Mapped[CitationKind] = mapped_column(
+        Enum(CitationKind, name="citation_kind"), nullable=False, server_default=CitationKind.document.value
     )
+    chunk_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document_chunks.id"), nullable=True, index=True
+    )
+    # Populated when citation_kind == tool_source: {"system": ..., "record_type": ..., "tool_name": ...}
+    tool_source: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MCPAuthType(StrEnum):
+    api_token = "api_token"
+    oauth2 = "oauth2"
+
+
+class MCPConnectionStatus(StrEnum):
+    pending = "pending"  # oauth2 only: created, waiting on the user to complete the authorize redirect
+    connected = "connected"
+    token_expired = "token_expired"
+    error = "error"
+
+
+class MCPConnection(Base):
+    """A shared, admin-managed connection to an external MCP server. Not per-user: internal
+    systems like Maximo/BPM are typically integrated via one service credential rather than
+    per-employee OAuth, and that keeps end-user setup to zero."""
+
+    __tablename__ = "mcp_connections"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    server_url: Mapped[str] = mapped_column(String, nullable=False)
+    auth_type: Mapped[MCPAuthType] = mapped_column(Enum(MCPAuthType, name="mcp_auth_type"), nullable=False)
+    status: Mapped[MCPConnectionStatus] = mapped_column(
+        Enum(MCPConnectionStatus, name="mcp_connection_status"),
+        nullable=False,
+        server_default=MCPConnectionStatus.pending.value,
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+
+    # api_token auth
+    encrypted_api_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # oauth2 auth — tokens plus enough of the client registration to refresh later without
+    # re-running discovery/dynamic client registration.
+    encrypted_access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    encrypted_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    oauth_client_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    encrypted_oauth_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    oauth_token_endpoint: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Transient PKCE state for the in-flight authorize round trip; cleared once the callback
+    # exchanges the code for tokens.
+    oauth_state: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    oauth_pkce_verifier: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class DocumentType(StrEnum):

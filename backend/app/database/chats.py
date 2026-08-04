@@ -62,9 +62,11 @@ async def delete_thread(user: AuthenticatedUser, thread_id: str) -> None:
     await client.table("chat_threads").delete().eq("id", thread_id).execute()
 
 
-async def append_citations(user: AuthenticatedUser, message_id: str, chunk_ids: list[str]) -> None:
-    if not chunk_ids:
+async def append_citations(user: AuthenticatedUser, message_id: str, citations: list[dict]) -> None:
+    """`citations` rows are either {"citation_kind": "document", "chunk_id": ...} or
+    {"citation_kind": "tool_source", "tool_source": {...}}."""
+    if not citations:
         return
     client = await get_user_scoped_client(user.access_token)
-    rows = [{"message_id": message_id, "chunk_id": chunk_id} for chunk_id in chunk_ids]
+    rows = [{"message_id": message_id, **citation} for citation in citations]
     await client.table("message_citations").insert(rows).execute()

@@ -1,4 +1,4 @@
-import { LogOut, Moon, MoreVertical, Pin, PinOff, Plus, Sun, Trash2 } from 'lucide-react'
+import { LogOut, Moon, MoreVertical, Pin, PinOff, Plug, Plus, Sun, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 
@@ -180,6 +180,14 @@ export function ChatSidebar({
             {initialsFor(user?.email)}
           </span>
           <span className="flex-1 truncate">{user?.email}</span>
+          <Link
+            to="/settings/connections"
+            aria-label="MCP connections"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={closeOnMobile}
+          >
+            <Plug className="size-4" />
+          </Link>
           <button
             type="button"
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
