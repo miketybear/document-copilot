@@ -30,7 +30,7 @@ export function NewChat() {
       <div className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
         <h1 className="text-2xl font-semibold text-foreground">{greeting()}</h1>
         <div className="w-full max-w-3xl">
-          <ChatInput disabled={creating} onSend={handleSend} />
+          <ChatInput disabled={creating} onSend={handleSend} onStop={() => {}} />
         </div>
       </div>
     </div>
