@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 from pydantic_ai.messages import ToolReturnPart
 
@@ -207,6 +207,65 @@ async def test_first_turn_falls_back_to_derived_title_when_generation_fails(monk
         pass
 
     set_thread_title.assert_awaited_once_with(USER, "thread-1", "Do X")
+
+
+async def test_prior_turns_are_passed_as_agent_message_history(monkeypatch):
+    answer = GroundedAnswer(answer="Then you file form B.", citations=[Citation(chunk_id="chunk-a")])
+    result = FakeAgentResult(answer, retrieved_passages=[_passage("chunk-a")])
+    agent_run = AsyncMock(return_value=result)
+
+    monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator, "build_toolsets", AsyncMock(return_value=MCPToolsetBundle()))
+    monkeypatch.setattr(orchestrator.agent, "run", agent_run)
+    monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
+    monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())
+    monkeypatch.setattr(orchestrator.chats, "set_thread_title", AsyncMock())
+
+    request = ChatStreamRequest(
+        id="thread-1",
+        messages=[
+            UIMessage(id="msg-1", role="user", parts=[UIMessagePart(type="text", text="How do I do X?")]),
+            UIMessage(id="msg-2", role="assistant", parts=[UIMessagePart(type="text", text="You do X.")]),
+            UIMessage(id="msg-3", role="user", parts=[UIMessagePart(type="text", text="And then what?")]),
+        ],
+    )
+    async for _ in orchestrator.run_turn(USER, request):
+        pass
+
+    agent_run.assert_awaited_once()
+    assert agent_run.await_args.args[0] == "And then what?"  # only the newest message is the prompt
+    history = agent_run.await_args.kwargs["message_history"]
+    assert [part.content for message in history for part in message.parts] == ["How do I do X?", "You do X."]
+
+
+async def test_logs_history_and_retrieval_usage(monkeypatch):
+    answer = GroundedAnswer(answer="Then you file form B.", citations=[Citation(chunk_id="chunk-a")])
+    result = FakeAgentResult(answer, retrieved_passages=[_passage("chunk-a"), _passage("chunk-b")])
+
+    monkeypatch.setattr(orchestrator, "get_user_scoped_client", AsyncMock(return_value=object()))
+    monkeypatch.setattr(orchestrator, "build_toolsets", AsyncMock(return_value=MCPToolsetBundle()))
+    monkeypatch.setattr(orchestrator.agent, "run", AsyncMock(return_value=result))
+    monkeypatch.setattr(orchestrator.chats, "append_message", AsyncMock(side_effect=[{"id": "u"}, {"id": "a"}]))
+    monkeypatch.setattr(orchestrator.chats, "append_citations", AsyncMock())
+    monkeypatch.setattr(orchestrator.chats, "set_thread_title", AsyncMock())
+    log_info = Mock()
+    monkeypatch.setattr(orchestrator.logger, "info", log_info)
+
+    request = ChatStreamRequest(
+        id="thread-1",
+        messages=[
+            UIMessage(id="msg-1", role="user", parts=[UIMessagePart(type="text", text="How do I do X?")]),
+            UIMessage(id="msg-2", role="assistant", parts=[UIMessagePart(type="text", text="You do X.")]),
+            UIMessage(id="msg-3", role="user", parts=[UIMessagePart(type="text", text="And then what?")]),
+        ],
+    )
+    async for _ in orchestrator.run_turn(USER, request):
+        pass
+
+    log_info.assert_any_call(
+        "chat.history_built", thread_id="thread-1", prior_messages=2, kept_messages=2, kept_tokens=10
+    )
+    log_info.assert_any_call("chat.retrieval_usage", thread_id="thread-1", retrieved_count=2, cited_count=1)
 
 
 async def test_later_turn_does_not_touch_thread_title(monkeypatch):
