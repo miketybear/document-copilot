@@ -10,6 +10,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { api, type MCPConnection, type MCPTool } from '@/lib/api'
 import { describeApiError } from '@/lib/chatErrors'
 
@@ -79,12 +80,17 @@ export function ToolsDialog({
           <div className="flex max-h-80 flex-col gap-3 overflow-y-auto">
             {tools.map((tool) => (
               <div key={tool.name} className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <Label htmlFor={`tool-${tool.name}`} className="font-mono text-sm">
                     {tool.name}
                   </Label>
                   {tool.description && (
-                    <p className="truncate text-xs text-muted-foreground">{tool.description}</p>
+                    <Tooltip>
+                      <TooltipTrigger render={<p className="truncate text-xs text-muted-foreground" />}>
+                        {tool.description}
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-pretty">{tool.description}</TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
                 <Switch
