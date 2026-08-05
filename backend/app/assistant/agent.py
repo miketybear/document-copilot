@@ -3,7 +3,6 @@ from pathlib import Path
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.azure import AzureProvider
-from pydantic_ai.settings import ModelSettings
 
 from app.assistant.deps import DocumentAgentDeps
 from app.assistant.outputs import GroundedAnswer
@@ -25,9 +24,6 @@ agent = Agent(
     deps_type=DocumentAgentDeps,
     output_type=GroundedAnswer,
     instructions=_INSTRUCTIONS,
-    # Lower than the provider default (1.0) — this agent answers from cited source text, not
-    # creative generation, so less sampling variance means steadier grounding/citation formatting.
-    model_settings=ModelSettings(temperature=0.4),
 )
 
 _title_agent = Agent(
