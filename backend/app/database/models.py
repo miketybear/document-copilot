@@ -118,6 +118,12 @@ class MCPConnection(Base):
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
     )
+    # Tool names to exclude from the toolset built for this connection each turn. Tracking
+    # disabled (not enabled) tools means a tool the server adds later defaults to available,
+    # matching what an admin would expect without having to revisit this connection.
+    disabled_tools: Mapped[list[str]] = mapped_column(
+        ARRAY(String), nullable=False, server_default="{}"
+    )
 
     # api_token auth
     encrypted_api_token: Mapped[str | None] = mapped_column(Text, nullable=True)

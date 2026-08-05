@@ -5,7 +5,7 @@ from app.auth.dependencies import AuthenticatedUser
 from app.config import settings
 from app.database import mcp_connections as db
 from app.database.models import MCPAuthType, MCPConnectionStatus
-from app.mcp import crypto, oauth
+from app.mcp import crypto, oauth, toolsets
 
 logger = structlog.get_logger(__name__)
 
@@ -148,10 +148,34 @@ async def test_connection(user: AuthenticatedUser, connection_id: str) -> dict:
     return _redact(connection)
 
 
+async def list_tools(user: AuthenticatedUser, connection_id: str) -> list[dict]:
+    """Live tool list from the MCP server, each flagged with whether it's currently enabled
+    for the agent to use (see app.mcp.toolsets.build_toolsets for where disabled_tools is
+    actually enforced — this is read-only, for the connection detail UI)."""
+    connection = await db.get_connection(user, connection_id)
+    if connection is None:
+        raise ConnectionNotFoundError(connection_id)
+
+    token = await toolsets.resolve_access_token(connection)
+    async with Client(connection["server_url"], auth=token) as client:
+        tools = await client.list_tools()
+
+    disabled = set(connection["disabled_tools"])
+    return [{"name": tool.name, "description": tool.description, "enabled": tool.name not in disabled} for tool in tools]
+
+
+async def set_disabled_tools(user: AuthenticatedUser, connection_id: str, disabled_tools: list[str]) -> dict:
+    connection = await db.get_connection(user, connection_id)
+    if connection is None:
+        raise ConnectionNotFoundError(connection_id)
+    connection = await db.update_connection(connection_id, {"disabled_tools": disabled_tools})
+    return _redact(connection)
+
+
 async def _verify_and_update_status(connection: dict) -> dict:
     """Connects to the remote MCP server and lists its tools, just to confirm the credential
     and URL actually work, then persists the resulting status/error for the UI's status badge."""
-    token = _bearer_token(connection)
+    token = await toolsets.resolve_access_token(connection)
     try:
         async with Client(connection["server_url"], auth=token) as client:
             await client.list_tools()
@@ -167,12 +191,3 @@ async def _verify_and_update_status(connection: dict) -> dict:
     return await db.update_connection(
         connection["id"], {"status": MCPConnectionStatus.connected.value, "last_error": None}
     )
-
-
-def _bearer_token(connection: dict) -> str | None:
-    encrypted = (
-        connection.get("encrypted_api_token")
-        if connection["auth_type"] == MCPAuthType.api_token.value
-        else connection.get("encrypted_access_token")
-    )
-    return crypto.decrypt(encrypted) if encrypted else None

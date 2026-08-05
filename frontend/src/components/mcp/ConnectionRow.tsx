@@ -1,4 +1,4 @@
-import { MoreVertical, RefreshCw, Trash2 } from 'lucide-react'
+import { MoreVertical, RefreshCw, Trash2, Wrench } from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { ToolsDialog } from '@/components/mcp/ToolsDialog'
 import { api, type MCPConnection } from '@/lib/api'
 import { describeApiError } from '@/lib/chatErrors'
 import type { VariantProps } from 'class-variance-authority'
@@ -41,6 +42,7 @@ const STATUS_VARIANT: Record<MCPConnection['status'], NonNullable<VariantProps<t
 export function ConnectionRow({ connection, onChanged }: { connection: MCPConnection; onChanged: () => void }) {
   const [testing, setTesting] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const [testError, setTestError] = useState<string | null>(null)
 
   async function handleTest() {
@@ -101,12 +103,21 @@ export function ConnectionRow({ connection, onChanged }: { connection: MCPConnec
             <MoreVertical className="size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {connection.status === 'connected' && (
+              <DropdownMenuItem onClick={() => setToolsOpen(true)}>
+                <Wrench className="size-4" /> Tools
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem variant="destructive" onClick={() => setConfirmingDelete(true)}>
               <Trash2 className="size-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {connection.status === 'connected' && (
+        <ToolsDialog connection={connection} open={toolsOpen} onOpenChange={setToolsOpen} />
+      )}
 
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>

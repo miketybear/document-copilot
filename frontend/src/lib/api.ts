@@ -31,11 +31,18 @@ export type MCPConnection = {
   status: 'pending' | 'connected' | 'token_expired' | 'error'
   last_error: string | null
   created_by: string
+  disabled_tools: string[]
   oauth_client_id: string | null
   oauth_token_endpoint: string | null
   token_expires_at: string | null
   created_at: string
   updated_at: string
+}
+
+export type MCPTool = {
+  name: string
+  description: string | null
+  enabled: boolean
 }
 
 export const api = {
@@ -59,5 +66,8 @@ export const api = {
       }),
     deleteConnection: (id: string) => http.delete<void>(`/mcp/connections/${id}`),
     testConnection: (id: string) => http.post<MCPConnection>(`/mcp/connections/${id}/test`),
+    listTools: (id: string) => http.get<MCPTool[]>(`/mcp/connections/${id}/tools`),
+    setDisabledTools: (id: string, disabledTools: string[]) =>
+      http.patch<MCPConnection>(`/mcp/connections/${id}/tools`, { disabled_tools: disabledTools }),
   },
 }

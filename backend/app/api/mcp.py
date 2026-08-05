@@ -28,6 +28,10 @@ class StartOAuthConnectionRequest(BaseModel):
     server_url: str
 
 
+class SetDisabledToolsRequest(BaseModel):
+    disabled_tools: list[str]
+
+
 @router.get("/connections")
 async def list_connections(user: AuthenticatedUser = Depends(get_current_user)) -> list[dict]:
     return await service.list_connections(user)
@@ -52,6 +56,27 @@ async def remove_connection(connection_id: str, user: AuthenticatedUser = Depend
 async def test_connection(connection_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> dict:
     try:
         return await service.test_connection(user, connection_id)
+    except service.ConnectionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found") from exc
+
+
+@router.get("/connections/{connection_id}/tools")
+async def list_tools(connection_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> list[dict]:
+    try:
+        return await service.list_tools(user, connection_id)
+    except service.ConnectionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found") from exc
+    except Exception as exc:
+        logger.warning("mcp.list_tools_failed", connection_id=connection_id, error=str(exc)[:500])
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Couldn't reach server: {exc}") from exc
+
+
+@router.patch("/connections/{connection_id}/tools")
+async def set_disabled_tools(
+    connection_id: str, body: SetDisabledToolsRequest, user: AuthenticatedUser = Depends(get_current_user)
+) -> dict:
+    try:
+        return await service.set_disabled_tools(user, connection_id, body.disabled_tools)
     except service.ConnectionNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found") from exc
 

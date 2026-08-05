@@ -1,9 +1,12 @@
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 import structlog
+from pydantic_ai import RunContext
 from pydantic_ai.mcp import MCPToolset
+from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import AbstractToolset
 
 from app.database import mcp_connections as db
@@ -38,9 +41,13 @@ async def build_toolsets() -> MCPToolsetBundle:
     bundle = MCPToolsetBundle()
     for connection in await db.list_connected():
         try:
-            token = await _resolve_access_token(connection)
+            token = await resolve_access_token(connection)
             prefix = _slug(connection["name"])
-            toolset = MCPToolset(connection["server_url"], auth=token, id=connection["id"]).prefixed(prefix)
+            toolset: AbstractToolset = MCPToolset(connection["server_url"], auth=token, id=connection["id"])
+            disabled = set(connection["disabled_tools"])
+            if disabled:
+                toolset = toolset.filtered(_not_disabled(disabled))
+            toolset = toolset.prefixed(prefix)
             bundle.toolsets.append(toolset)
             bundle.connection_name_by_prefix[prefix] = connection["name"]
         except Exception as exc:
@@ -50,7 +57,7 @@ async def build_toolsets() -> MCPToolsetBundle:
     return bundle
 
 
-async def _resolve_access_token(connection: dict) -> str | None:
+async def resolve_access_token(connection: dict) -> str | None:
     if connection["auth_type"] == MCPAuthType.api_token.value:
         encrypted = connection.get("encrypted_api_token")
         return crypto.decrypt(encrypted) if encrypted else None
@@ -95,6 +102,10 @@ async def _refresh_oauth_tokens(connection: dict) -> dict:
     if tokens.refresh_token:
         updated_fields["encrypted_refresh_token"] = crypto.encrypt(tokens.refresh_token)
     return await db.update_connection(connection["id"], updated_fields)
+
+
+def _not_disabled(disabled: set[str]) -> Callable[[RunContext, ToolDefinition], bool]:
+    return lambda _ctx, tool_def: tool_def.name not in disabled
 
 
 def _slug(name: str) -> str:
