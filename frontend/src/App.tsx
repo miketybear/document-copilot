@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
 
+import { RequireAdmin } from '@/components/RequireAdmin'
 import { RequireAuth } from '@/components/RequireAuth'
 import { AppShell } from '@/components/layout/AppShell'
 import { SignIn } from '@/pages/auth/SignIn'
@@ -20,7 +21,14 @@ function App() {
       >
         <Route path="/" element={<NewChat />} />
         <Route path="/chat/:threadId" element={<ChatPage />} />
-        <Route path="/settings/connections" element={<ConnectionsPage />} />
+        <Route
+          path="/settings/connections"
+          element={
+            <RequireAdmin>
+              <ConnectionsPage />
+            </RequireAdmin>
+          }
+        />
       </Route>
     </Routes>
   )

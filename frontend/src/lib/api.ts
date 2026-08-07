@@ -2,6 +2,12 @@ import type { UIMessage } from 'ai'
 
 import { http } from '@/lib/http'
 
+export type CurrentUser = {
+  id: string
+  email: string
+  is_admin: boolean
+}
+
 export type ChatThread = {
   id: string
   user_id: string
@@ -47,6 +53,7 @@ export type MCPTool = {
 
 export const api = {
   ...http,
+  me: () => http.get<CurrentUser>('/me'),
   chat: {
     listThreads: () => http.get<ChatThread[]>('/chat/threads'),
     createThread: (title?: string) => http.post<ChatThread>('/chat/threads', { title }),

@@ -83,7 +83,7 @@ export function ChatSidebar({
   activeThreadId: string | undefined
   onThreadsChanged: () => void
 }) {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { isMobile, setOpenMobile } = useSidebar()
   const navigate = useNavigate()
@@ -180,14 +180,16 @@ export function ChatSidebar({
             {initialsFor(user?.email)}
           </span>
           <span className="flex-1 truncate">{user?.email}</span>
-          <Link
-            to="/settings/connections"
-            aria-label="MCP connections"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={closeOnMobile}
-          >
-            <Plug className="size-4" />
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/settings/connections"
+              aria-label="MCP connections"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={closeOnMobile}
+            >
+              <Plug className="size-4" />
+            </Link>
+          )}
           <button
             type="button"
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}

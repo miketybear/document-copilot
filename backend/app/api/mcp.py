@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from app.auth.dependencies import AuthenticatedUser, get_current_user
+from app.auth.dependencies import AuthenticatedUser, require_admin
 from app.config import settings
 from app.mcp import service
 
@@ -33,19 +33,19 @@ class SetDisabledToolsRequest(BaseModel):
 
 
 @router.get("/connections")
-async def list_connections(user: AuthenticatedUser = Depends(get_current_user)) -> list[dict]:
+async def list_connections(user: AuthenticatedUser = Depends(require_admin)) -> list[dict]:
     return await service.list_connections(user)
 
 
 @router.post("/connections", status_code=status.HTTP_201_CREATED)
 async def create_connection(
-    body: CreateApiTokenConnectionRequest, user: AuthenticatedUser = Depends(get_current_user)
+    body: CreateApiTokenConnectionRequest, user: AuthenticatedUser = Depends(require_admin)
 ) -> dict:
     return await service.create_api_token_connection(user, body.name, body.server_url, body.api_token)
 
 
 @router.delete("/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_connection(connection_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> None:
+async def remove_connection(connection_id: str, user: AuthenticatedUser = Depends(require_admin)) -> None:
     try:
         await service.delete_connection(user, connection_id)
     except service.ConnectionNotFoundError as exc:
@@ -53,7 +53,7 @@ async def remove_connection(connection_id: str, user: AuthenticatedUser = Depend
 
 
 @router.post("/connections/{connection_id}/test")
-async def test_connection(connection_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> dict:
+async def test_connection(connection_id: str, user: AuthenticatedUser = Depends(require_admin)) -> dict:
     try:
         return await service.test_connection(user, connection_id)
     except service.ConnectionNotFoundError as exc:
@@ -61,7 +61,7 @@ async def test_connection(connection_id: str, user: AuthenticatedUser = Depends(
 
 
 @router.get("/connections/{connection_id}/tools")
-async def list_tools(connection_id: str, user: AuthenticatedUser = Depends(get_current_user)) -> list[dict]:
+async def list_tools(connection_id: str, user: AuthenticatedUser = Depends(require_admin)) -> list[dict]:
     try:
         return await service.list_tools(user, connection_id)
     except service.ConnectionNotFoundError as exc:
@@ -73,7 +73,7 @@ async def list_tools(connection_id: str, user: AuthenticatedUser = Depends(get_c
 
 @router.patch("/connections/{connection_id}/tools")
 async def set_disabled_tools(
-    connection_id: str, body: SetDisabledToolsRequest, user: AuthenticatedUser = Depends(get_current_user)
+    connection_id: str, body: SetDisabledToolsRequest, user: AuthenticatedUser = Depends(require_admin)
 ) -> dict:
     try:
         return await service.set_disabled_tools(user, connection_id, body.disabled_tools)
@@ -83,7 +83,7 @@ async def set_disabled_tools(
 
 @router.post("/connections/oauth", status_code=status.HTTP_201_CREATED)
 async def start_oauth_connection(
-    body: StartOAuthConnectionRequest, user: AuthenticatedUser = Depends(get_current_user)
+    body: StartOAuthConnectionRequest, user: AuthenticatedUser = Depends(require_admin)
 ) -> dict:
     """Creates a pending connection and returns an authorize_url — the frontend navigates the
     browser there to complete the OAuth consent; the server never sees the admin's credentials."""

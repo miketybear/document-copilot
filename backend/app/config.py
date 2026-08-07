@@ -24,6 +24,11 @@ class Settings(BaseSettings):
 
     allowed_origins: str = "http://localhost:5173"
 
+    # Comma-separated emails granted admin access (currently: managing MCP connections).
+    # Re-evaluated on every login (see app.auth.dependencies.get_current_user) — editing this
+    # and having the user sign in again (or refresh) is enough, no separate role-management UI.
+    admin_emails: str = ""
+
     # Fernet key (32 url-safe base64-encoded bytes) used to encrypt MCP connection credentials
     # (API tokens, OAuth access/refresh tokens) at rest. Generate with
     # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
@@ -36,6 +41,10 @@ class Settings(BaseSettings):
     @cached_property
     def allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+
+    @cached_property
+    def admin_emails_list(self) -> list[str]:
+        return [email.strip().lower() for email in self.admin_emails.split(",") if email.strip()]
 
     @cached_property
     def sqlalchemy_database_url(self) -> str:

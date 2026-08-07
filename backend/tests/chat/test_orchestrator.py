@@ -9,7 +9,7 @@ from app.chat.messages import ChatStreamRequest, UIMessage, UIMessagePart
 from app.mcp.toolsets import MCPToolsetBundle
 from app.retrieval.types import SourcePassage
 
-USER = AuthenticatedUser(id="user-1", email="user@example.com", access_token="fake-token")
+USER = AuthenticatedUser(id="user-1", email="user@example.com", access_token="fake-token", is_admin=False)
 
 
 def _passage(chunk_id: str) -> SourcePassage:
