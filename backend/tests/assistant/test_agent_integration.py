@@ -22,7 +22,9 @@ async def test_real_question_produces_grounded_answer_about_the_right_document()
     client = await get_service_role_client()
     deps = DocumentAgentDeps(user_id="test-user", thread_id="test-thread", supabase_client=client)
 
-    result, retrieved_passages = await _run_agent_grounded("How do I maintain a safety level transmitter?", deps)
+    result, retrieved_passages, _mcp_bundle = await _run_agent_grounded(
+        "How do I maintain a safety level transmitter?", [], deps
+    )
 
     assert result.output.citations, "expected the agent to cite at least one passage"
 
@@ -37,7 +39,7 @@ async def test_sick_leave_question_produces_grounded_answer_about_the_right_docu
     client = await get_service_role_client()
     deps = DocumentAgentDeps(user_id="test-user", thread_id="test-thread", supabase_client=client)
 
-    result, retrieved_passages = await _run_agent_grounded("What is the sick leave policy?", deps)
+    result, retrieved_passages, _mcp_bundle = await _run_agent_grounded("What is the sick leave policy?", [], deps)
 
     assert result.output.citations, "expected the agent to cite at least one passage"
 
@@ -51,8 +53,8 @@ async def test_question_with_no_relevant_documents_returns_no_fabricated_citatio
 
     # _run_agent_grounded raises GroundingError if any citation is fabricated; it not
     # raising is the real assertion here, regardless of whether citations end up empty.
-    result, retrieved_passages = await _run_agent_grounded(
-        "What is the company's policy on interstellar travel expenses?", deps
+    result, retrieved_passages, _mcp_bundle = await _run_agent_grounded(
+        "What is the company's policy on interstellar travel expenses?", [], deps
     )
 
     retrieved_ids = {p.chunk_id for p in retrieved_passages}
@@ -66,7 +68,7 @@ async def test_sick_leave_question_produces_answer_with_no_inline_citation_marke
     client = await get_service_role_client()
     deps = DocumentAgentDeps(user_id="test-user", thread_id="test-thread", supabase_client=client)
 
-    result, _retrieved_passages = await _run_agent_grounded("What is the sick leave policy?", deps)
+    result, _retrieved_passages, _mcp_bundle = await _run_agent_grounded("What is the sick leave policy?", [], deps)
 
     sanitized = strip_inline_citation_markers(result.output.answer)
 
